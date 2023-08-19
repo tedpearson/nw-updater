@@ -1,0 +1,20 @@
+ynab:
+  access_token: your_ynab_token
+  budget_name: Your Budget Name in YNAB (Usually "My Budget" by default)
+institutions:
+  - name: fidelity
+    auth:
+      username: your_username
+      encrypted_password: your_encrypted_password
+    accounts:
+      - name: Your Account Name in Fidelity
+        mapping: Your Account Name in YNAB
+      - name: Your Second Account
+        mapping: Your Second Account in YNAB
+  - name: netbenefits
+    auth:
+      username: your_username
+      encrypted_password: your_encrypted_password
+    accounts:
+      - name: Your Account Name in Fidelity
+        mapping: Your Account Name in YNAB
