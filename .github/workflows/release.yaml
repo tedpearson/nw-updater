@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    uses: tedpearson/ForecastMetrics/.github/workflows/release-template.yaml@master
+    uses: tedpearson/nw-updater/.github/workflows/release-template.yaml@main
     with:
       executable: nw-updater
       ref: main
