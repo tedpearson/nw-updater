@@ -26,7 +26,7 @@ func YnabUpdateBalances(balances map[string]int64, config YnabConfig) error {
 	c := ynab.NewClient(config.AccessToken)
 	budgets, err := c.Budget().GetBudgets()
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to get budget: %w", err)
 	}
 	bIdx := slices.IndexFunc(budgets, func(summary *budget.Summary) bool {
 		return summary.Name == config.BudgetName
@@ -37,12 +37,12 @@ func YnabUpdateBalances(balances map[string]int64, config YnabConfig) error {
 	bId := budgets[bIdx].ID
 	results, err := c.Account().GetAccounts(bId, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to get accounts: %w", err)
 	}
 	for accountName, balance := range balances {
 		err := updateBalance(c, bId, accountName, balance, results.Accounts)
 		if err != nil {
-			log.Println(err)
+			log.Printf("Unable to update balance for '%s': %v", accountName, err)
 		}
 	}
 	return nil
@@ -57,7 +57,6 @@ func updateBalance(c ynab.ClientServicer, budgetId, accountName string, newBalan
 		return fmt.Errorf("unable to find account '%s'", accountName)
 	}
 	acct := accounts[accountIdx]
-	// todo: run checks here!
 	err := validateAccount(acct, newBalance)
 	if err != nil {
 		return err
@@ -73,7 +72,7 @@ func updateBalance(c ynab.ClientServicer, budgetId, accountName string, newBalan
 		PayeeName: &payee,
 		Memo:      &memo,
 	})
-	return err
+	return fmt.Errorf("unable to create adjustment transaction on account '%s': %w", accountName, err)
 }
 
 // validateAccount checks that an account: is on budget, not deleted or closed,
@@ -83,10 +82,10 @@ func validateAccount(acct *account.Account, newBalance int64) error {
 		return fmt.Errorf("account does not pass checks: %+v", acct)
 	}
 	if acct.ClearedBalance != acct.Balance || acct.UnclearedBalance > 0 {
-		return fmt.Errorf("account has an uncleared balance %+v", acct)
+		return fmt.Errorf("account has an uncleared balance: %+v", acct)
 	}
 	if acct.Balance == newBalance*10 {
-		return fmt.Errorf("account balance has not changed %+v", acct)
+		return fmt.Errorf("account balance has not changed: %+v", acct)
 	}
 	return nil
 }

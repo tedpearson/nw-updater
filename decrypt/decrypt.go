@@ -29,7 +29,7 @@ func NewDecryptor(file string) Decryptor {
 	return Decryptor{passphrase: strings.TrimSpace(string(contents)), o: openssl.New()}
 }
 
-// Decrypt decrypts a base64 encoded aes-256-cbc string.
+// Decrypt decrypts a base64 encoded aes-256-cbc string. If there is an error decrypting, the original string is returned.
 func (d Decryptor) Decrypt(s string) string {
 	decoded, err := d.o.DecryptBytes(d.passphrase, []byte(s), openssl.BytesToKeySHA256)
 	if err != nil {
