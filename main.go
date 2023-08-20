@@ -51,7 +51,6 @@ import (
 type Config struct {
 	InstitutionConfig []InstitutionConfig `yaml:"institutions"`
 	YnabConfig        YnabConfig          `yaml:"ynab"`
-	decryptor         decrypt.Decryptor
 }
 
 // InstitutionConfig contains the configs for an account at an institution along with the mapping to a YNAB account.
