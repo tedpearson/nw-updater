@@ -1,3 +1,6 @@
+/*
+Package institution contains types that get balances for various institutions like banks, retirement programs, etc.
+*/
 package institution
 
 import (
@@ -16,26 +19,31 @@ import (
 	"nw-updater/decrypt"
 )
 
+// Auth contains authentication information for an institution.
 type Auth struct {
 	Username          string
 	EncryptedPassword string `yaml:"encrypted_password"`
 }
 
+// AccountMapping contains the account name in the institution and the mapping to the YNAB account name.
 type AccountMapping struct {
 	Name    string
 	Mapping string
 }
 
+// An Institution gets the balances for the given slice of [AccountMapping].
 type Institution interface {
 	GetBalances(context.Context, Auth, decrypt.Decryptor, []AccountMapping) (map[string]int64, error)
 }
 
-var institutions map[string]Institution = make(map[string]Institution)
+var institutions = make(map[string]Institution)
 
+// Each Institution should register itself with this function in an init() method so that it can be looked up by name.
 func registerInstitution(name string, institution Institution) {
 	institutions[name] = institution
 }
 
+// MustGet looks up an institution by name, panicking if none can be found.
 func MustGet(name string) Institution {
 	institution, ok := institutions[name]
 	if !ok {
@@ -44,6 +52,8 @@ func MustGet(name string) Institution {
 	return institution
 }
 
+// newContext creates a new chromedp context for each institution, using an existing tab if the urlPrefix matches
+// an open one, which is only currently used when debugging with an existing chrome instance with a websocket.
 func newContext(ctx context.Context, urlPrefix string) (context.Context, context.CancelFunc) {
 	// get the list of the targets
 	infos, err := chromedp.Targets(ctx)
@@ -61,6 +71,9 @@ func newContext(ctx context.Context, urlPrefix string) (context.Context, context
 	return context.WithTimeout(ctx, 1*time.Minute)
 }
 
+// getMultipleBalances is a utility function used by an Institution to retrieve multiple balances from
+// a single page. The Institution provides a function to get the nodes containing the account name and balance,
+// and selectors for the name and balance inside each node.
 func getMultipleBalances(getNodes func(*[]*cdp.Node) error, ctx context.Context, mapping []AccountMapping,
 	nameSelector, balSelector string) (map[string]int64, error) {
 	var nodes []*cdp.Node
@@ -95,6 +108,7 @@ func getMultipleBalances(getNodes func(*[]*cdp.Node) error, ctx context.Context,
 
 var centsPattern = regexp.MustCompile(`\D`)
 
+// parseCents parses a string for a balance, removing all non-numeric characters and parsing to int64.
 func parseCents(str string) (int64, error) {
 	numsOnly := centsPattern.ReplaceAllString(str, "")
 	return strconv.ParseInt(numsOnly, 10, 64)

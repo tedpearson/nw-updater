@@ -14,11 +14,14 @@ import (
 	"github.com/brunomvsouza/ynab.go/api/transaction"
 )
 
+// YnabConfig contains the information needed to update YNAB accounts.
 type YnabConfig struct {
 	AccessToken string `yaml:"access_token"`
 	BudgetName  string `yaml:"budget_name"`
 }
 
+// YnabUpdateBalances takes a map of YNAB account names to balances in cents as well as a config, and creates
+// adjustment transactions in those accounts to make the account balances match.
 func YnabUpdateBalances(balances map[string]int64, config YnabConfig) error {
 	c := ynab.NewClient(config.AccessToken)
 	budgets, err := c.Budget().GetBudgets()
@@ -45,6 +48,7 @@ func YnabUpdateBalances(balances map[string]int64, config YnabConfig) error {
 	return nil
 }
 
+// updateBalance Updates the balance in an individual YNAB account by creating an adjustment transaction
 func updateBalance(c ynab.ClientServicer, budgetId, accountName string, newBalance int64, accounts []*account.Account) error {
 	accountIdx := slices.IndexFunc(accounts, func(a *account.Account) bool {
 		return a.Name == accountName
@@ -72,6 +76,8 @@ func updateBalance(c ynab.ClientServicer, budgetId, accountName string, newBalan
 	return err
 }
 
+// validateAccount checks that an account: is on budget, not deleted or closed,
+// is an "other asset" account, is up-to-date with reconciliation, and has a balance that has changed.
 func validateAccount(acct *account.Account, newBalance int64) error {
 	if acct.OnBudget || acct.Deleted || acct.Closed || acct.Type != account.TypeOtherAsset {
 		return fmt.Errorf("account does not pass checks: %+v", acct)
