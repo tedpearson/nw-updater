@@ -34,7 +34,7 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
+	"fmt"
 	"maps"
 	"os"
 
@@ -72,23 +72,23 @@ func main() {
 	// read config
 	file, err := os.ReadFile(*configFlag)
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 	var config Config
 	err = yaml.Unmarshal(file, &config)
 	file = nil
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 
 	ctx, cancel := GetContext(*headlessFlag, *websocketFlag)
 	defer cancel()
 	decryptor := decrypt.NewDecryptor(*passphraseFileFlag)
 	balances := GetAllBalances(ctx, config.InstitutionConfig, decryptor)
-	log.Printf("%v\n", balances)
+	fmt.Printf("%v\n", balances)
 	err = YnabUpdateBalances(balances, config.YnabConfig)
 	if err != nil {
-		log.Printf("Error updating ynab balances: %v\n", err)
+		fmt.Printf("Error updating ynab balances: %v\n", err)
 	}
 }
 
@@ -99,7 +99,7 @@ func GetAllBalances(ctx context.Context, config []InstitutionConfig, decryptor d
 	for _, ic := range config {
 		bs, err := institution.MustGet(ic.Name).GetBalances(ctx, ic.Auth, decryptor, ic.AccountMappings)
 		if err != nil {
-			log.Printf("Failed to get balances from %s: %v", ic.Name, err)
+			fmt.Printf("Failed to get balances from %s: %v\n", ic.Name, err)
 		}
 		maps.Copy(balances, bs)
 	}
@@ -124,7 +124,7 @@ func GetContext(headless bool, websocket string) (context.Context, context.Cance
 	}
 	ctx, cancel, err := cu.New(cuConfig)
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 	return ctx, func() {
 		cancel()

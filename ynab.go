@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"slices"
 	"time"
 
@@ -42,7 +41,7 @@ func YnabUpdateBalances(balances map[string]int64, config YnabConfig) error {
 	for accountName, balance := range balances {
 		err := updateBalance(c, bId, accountName, balance, results.Accounts)
 		if err != nil {
-			log.Printf("Unable to update balance for '%s': %v", accountName, err)
+			fmt.Printf("Unable to update balance for '%s': %v\n", accountName, err)
 		}
 	}
 	return nil

@@ -5,7 +5,7 @@ package institution
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"regexp"
 	"slices"
 	"strconv"
@@ -47,7 +47,7 @@ func registerInstitution(name string, institution Institution) {
 func MustGet(name string) Institution {
 	institution, ok := institutions[name]
 	if !ok {
-		log.Panicf("Invalid institution '%s'", name)
+		panic(fmt.Errorf("invalid institution '%s'", name))
 	}
 	return institution
 }
@@ -58,7 +58,7 @@ func newContext(ctx context.Context, urlPrefix string) (context.Context, context
 	// get the list of the targets
 	infos, err := chromedp.Targets(ctx)
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 	i := slices.IndexFunc(infos, func(info *target.Info) bool {
 		return strings.HasPrefix(info.URL, urlPrefix)
@@ -87,7 +87,7 @@ func getMultipleBalances(getNodes func(*[]*cdp.Node) error, ctx context.Context,
 			chromedp.TextContent(nameSelector, &name, chromedp.ByQuery, chromedp.FromNode(node)),
 			chromedp.TextContent(balSelector, &balance, chromedp.ByQuery, chromedp.FromNode(node)))
 		if err != nil {
-			log.Printf("Failed to find account name and balance: %v", err)
+			fmt.Printf("Failed to find account name and balance: %v\n", err)
 			continue
 		}
 		trimmedName := strings.TrimSpace(name)
@@ -97,7 +97,7 @@ func getMultipleBalances(getNodes func(*[]*cdp.Node) error, ctx context.Context,
 		if mappingIndex != -1 {
 			balanceNum, err := parseCents(balance)
 			if err != nil {
-				log.Printf("Failed to parse balance '%s': %v", balance, err)
+				fmt.Printf("Failed to parse balance '%s': %v\n", balance, err)
 				continue
 			}
 			balances[mapping[mappingIndex].Mapping] = balanceNum
