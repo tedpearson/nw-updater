@@ -41,5 +41,5 @@ func (f fidelity) auth(ctx context.Context, username, password string) error {
 		chromedp.SetValue("#userId-input", username),
 		chromedp.SetValue("#password", password),
 		chromedp.Click("#fs-login-button"),
-		chromedp.WaitVisible(".acct-selector__acct-list"))
+		chromedp.WaitReady(".acct-selector__acct-list"))
 }
