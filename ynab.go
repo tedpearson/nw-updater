@@ -73,7 +73,10 @@ func updateBalance(c ynab.ClientServicer, budgetId, accountName string, newBalan
 		PayeeName: &payee,
 		Memo:      &memo,
 	})
-	return fmt.Errorf("unable to create adjustment transaction on account '%s': %w", accountName, err)
+	if err != nil {
+		return fmt.Errorf("unable to create adjustment transaction on account '%s': %w", accountName, err)
+	}
+	return nil
 }
 
 // validateAccount checks that an account: is on budget, not deleted or closed,
