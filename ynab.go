@@ -11,18 +11,20 @@ import (
 	"github.com/brunomvsouza/ynab.go/api/account"
 	"github.com/brunomvsouza/ynab.go/api/budget"
 	"github.com/brunomvsouza/ynab.go/api/transaction"
+
+	"nw-updater/decrypt"
 )
 
 // YnabConfig contains the information needed to update YNAB accounts.
 type YnabConfig struct {
-	AccessToken string `yaml:"access_token"`
-	BudgetName  string `yaml:"budget_name"`
+	EncryptedAccessToken string `yaml:"encrypted_access_token"`
+	BudgetName           string `yaml:"budget_name"`
 }
 
 // YnabUpdateBalances takes a map of YNAB account names to balances in cents as well as a config, and creates
 // adjustment transactions in those accounts to make the account balances match.
-func YnabUpdateBalances(balances map[string]int64, config YnabConfig) error {
-	c := ynab.NewClient(config.AccessToken)
+func YnabUpdateBalances(balances map[string]int64, config YnabConfig, decryptor decrypt.Decryptor) error {
+	c := ynab.NewClient(decryptor.Decrypt(config.EncryptedAccessToken))
 	budgets, err := c.Budget().GetBudgets()
 	if err != nil {
 		return fmt.Errorf("unable to get budget: %w", err)

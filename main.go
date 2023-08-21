@@ -86,7 +86,7 @@ func main() {
 	decryptor := decrypt.NewDecryptor(*passphraseFileFlag)
 	balances := GetAllBalances(ctx, config.InstitutionConfig, decryptor)
 	fmt.Printf("%v\n", balances)
-	err = YnabUpdateBalances(balances, config.YnabConfig)
+	err = YnabUpdateBalances(balances, config.YnabConfig, decryptor)
 	if err != nil {
 		fmt.Printf("Error updating ynab balances: %v\n", err)
 	}

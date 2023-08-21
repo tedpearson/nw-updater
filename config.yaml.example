@@ -1,5 +1,5 @@
 ynab:
-  access_token: your_ynab_token
+  encrypted_access_token: your_encrypted_ynab_token
   budget_name: Your Budget Name in YNAB (Usually "My Budget" by default)
 institutions:
   - name: fidelity
