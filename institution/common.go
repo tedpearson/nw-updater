@@ -63,12 +63,17 @@ func newContext(ctx context.Context, urlPrefix string) (context.Context, context
 	i := slices.IndexFunc(infos, func(info *target.Info) bool {
 		return strings.HasPrefix(info.URL, urlPrefix)
 	})
+	var cancel1 context.CancelFunc
 	if i != -1 {
-		ctx, _ = chromedp.NewContext(ctx, chromedp.WithTargetID(infos[i].TargetID))
+		ctx, cancel1 = chromedp.NewContext(ctx, chromedp.WithTargetID(infos[i].TargetID))
 	}
 	// no targets or none match urlPrefix.
-	ctx, _ = chromedp.NewContext(ctx)
-	return context.WithTimeout(ctx, 1*time.Minute)
+	ctx, cancel1 = chromedp.NewContext(ctx)
+	ctx, cancel2 := context.WithTimeout(ctx, 1*time.Minute)
+	return ctx, func() {
+		cancel2()
+		cancel1()
+	}
 }
 
 // getMultipleBalances is a utility function used by an Institution to retrieve multiple balances from
