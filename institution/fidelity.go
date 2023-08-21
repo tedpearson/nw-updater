@@ -24,7 +24,6 @@ func init() {
 func (f fidelity) GetBalances(ctx context.Context, auth Auth, d decrypt.Decryptor, mapping []AccountMapping) (map[string]int64, error) {
 	ctx, cancel := newContext(ctx, fidelityUrlPrefix)
 	defer cancel()
-	_ = cancel
 	err := f.auth(ctx, auth.Username, d.Decrypt(auth.EncryptedPassword))
 	if err != nil {
 		return nil, err

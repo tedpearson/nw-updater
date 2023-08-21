@@ -24,7 +24,6 @@ func init() {
 func (n netbenefits) GetBalances(ctx context.Context, auth Auth, d decrypt.Decryptor, mapping []AccountMapping) (map[string]int64, error) {
 	ctx, cancel := newContext(ctx, nbPrefixUrl)
 	defer cancel()
-	_ = cancel
 
 	err := n.auth(ctx, auth.Username, d.Decrypt(auth.EncryptedPassword))
 	if err != nil {
