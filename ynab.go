@@ -64,10 +64,11 @@ func updateBalance(c ynab.ClientServicer, budgetId, accountName string, newBalan
 	}
 	payee := "Market Changes"
 	memo := "Entered automatically by nw-updater"
+	difference := (newBalance * 10) - acct.Balance
 	_, err = c.Transaction().CreateTransaction(budgetId, transaction.PayloadTransaction{
 		AccountID: acct.ID,
 		Date:      api.Date{Time: time.Now()},
-		Amount:    (newBalance * 10) - acct.Balance,
+		Amount:    difference,
 		Cleared:   transaction.ClearingStatusReconciled,
 		Approved:  true,
 		PayeeName: &payee,
@@ -76,6 +77,11 @@ func updateBalance(c ynab.ClientServicer, budgetId, accountName string, newBalan
 	if err != nil {
 		return fmt.Errorf("unable to create adjustment transaction on account '%s': %w", accountName, err)
 	}
+	sign := "+"
+	if difference < 0 {
+		sign = "-"
+	}
+	fmt.Printf("Updated '%s' to $%.2f (%s $%.2f)", accountName, float64(newBalance)/100.0, sign, float64(difference)/100.0)
 	return nil
 }
 
