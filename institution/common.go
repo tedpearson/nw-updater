@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -71,7 +70,7 @@ func newContext(ctx context.Context, urlPrefix string) (context.Context, context
 	}
 	// no targets or none match urlPrefix.
 	ctx, cancel1 = chromedp.NewContext(ctx)
-	ctx, cancel2 := context.WithTimeout(ctx, 1*time.Minute)
+	ctx, cancel2 := context.WithTimeout(ctx, 2*time.Minute)
 	return ctx, func() {
 		cancel2()
 		cancel1()
@@ -101,7 +100,6 @@ func getMultipleBalances(getNodes func(*[]*cdp.Node) error, ctx context.Context,
 		if err != nil {
 			fmt.Printf("Failed to find account name and balance: %v\n", err)
 			println(node.Dump("", "  ", false))
-			debug.PrintStack()
 			continue
 		}
 		trimmedName := strings.TrimSpace(name)
