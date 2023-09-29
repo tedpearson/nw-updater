@@ -40,7 +40,7 @@ func (n netbenefits) GetBalances(ctx context.Context, auth Auth, d decrypt.Decry
 func (n netbenefits) auth(ctx context.Context, username, password string) error {
 	return chromedp.Run(ctx,
 		chromedp.Navigate(nbLoginUrl),
-		chromedp.SetValue("#username", username, chromedp.ByQuery),
-		chromedp.SetValue("#password", password, chromedp.ByQuery),
-		chromedp.Click("#fs-login-button", chromedp.ByQuery))
+		chromedp.SetValue("#dom-username-input", username),
+		chromedp.SetValue("#dom-pswd-input", password),
+		chromedp.Click("#dom-login-button"))
 }

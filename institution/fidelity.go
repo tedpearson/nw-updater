@@ -38,8 +38,8 @@ func (f fidelity) GetBalances(ctx context.Context, auth Auth, d decrypt.Decrypto
 func (f fidelity) auth(ctx context.Context, username, password string) error {
 	return chromedp.Run(ctx,
 		chromedp.Navigate(fidelityLoginUrl),
-		chromedp.SetValue("#userId-input", username),
-		chromedp.SetValue("#password", password),
-		chromedp.Click("#fs-login-button"),
+		chromedp.SetValue("#dom-username-input", username),
+		chromedp.SetValue("#dom-pswd-input", password),
+		chromedp.Click("#dom-login-button"),
 		chromedp.WaitReady(".acct-selector__acct-list"))
 }
