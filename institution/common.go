@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -93,6 +94,7 @@ func getMultipleBalances(getNodes func(*[]*cdp.Node) error, ctx context.Context,
 			chromedp.TextContent(balSelector, &balance, chromedp.ByQuery, chromedp.FromNode(node)))
 		if err != nil {
 			fmt.Printf("Failed to find account name and balance: %v\n", err)
+			debug.PrintStack()
 			continue
 		}
 		trimmedName := strings.TrimSpace(name)

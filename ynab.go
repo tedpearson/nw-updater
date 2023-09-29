@@ -81,7 +81,7 @@ func updateBalance(c ynab.ClientServicer, budgetId, accountName string, newBalan
 	if difference < 0 {
 		sign = "-"
 	}
-	fmt.Printf("Updated '%s' to $%.2f (%s $%.2f)", accountName, float64(newBalance)/100.0, sign, float64(difference)/100.0)
+	fmt.Printf("Updated '%s' to $%.2f (%s $%.2f)\n", accountName, float64(newBalance)/100.0, sign, float64(difference)/1000.0)
 	return nil
 }
 
