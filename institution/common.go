@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
 
@@ -88,12 +89,18 @@ func getMultipleBalances(getNodes func(*[]*cdp.Node) error, ctx context.Context,
 	}
 	balances := make(map[string]int64)
 	for _, node := range nodes {
+		// get full node stack for possible debugging
+		_ = chromedp.Run(ctx,
+			chromedp.ActionFunc(func(ctx context.Context) error {
+				return dom.RequestChildNodes(node.NodeID).WithDepth(-1).Do(ctx)
+			}))
 		var name, balance string
 		err := chromedp.Run(ctx,
 			chromedp.TextContent(nameSelector, &name, chromedp.ByQuery, chromedp.FromNode(node)),
 			chromedp.TextContent(balSelector, &balance, chromedp.ByQuery, chromedp.FromNode(node)))
 		if err != nil {
 			fmt.Printf("Failed to find account name and balance: %v\n", err)
+			println(node.Dump("", "  ", false))
 			debug.PrintStack()
 			continue
 		}
