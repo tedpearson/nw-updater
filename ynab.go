@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 	"time"
 
@@ -81,7 +82,8 @@ func updateBalance(c ynab.ClientServicer, budgetId, accountName string, newBalan
 	if difference < 0 {
 		sign = "-"
 	}
-	fmt.Printf("Updated '%s' to $%.2f (%s $%.2f)\n", accountName, float64(newBalance)/100.0, sign, float64(difference)/1000.0)
+	fmt.Printf("Updated '%s' to $%.2f ($%s%.2f)\n",
+		accountName, float64(newBalance)/100.0, sign, math.Abs(float64(difference))/1000.0)
 	return nil
 }
 
@@ -95,7 +97,7 @@ func validateAccount(acct *account.Account, newBalance int64) error {
 		return fmt.Errorf("account has an uncleared balance: %+v", acct)
 	}
 	if acct.Balance == newBalance*10 {
-		return fmt.Errorf("account balance has not changed: %+v", acct)
+		return errors.New("account balance has not changed")
 	}
 	return nil
 }
