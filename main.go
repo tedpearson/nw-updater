@@ -51,6 +51,7 @@ import (
 type Config struct {
 	InstitutionConfig []InstitutionConfig `yaml:"institutions"`
 	YnabConfig        YnabConfig          `yaml:"ynab"`
+	EmailConfig       EmailConfig         `yaml:"email"`
 }
 
 // InstitutionConfig contains the configs for an account at an institution along with the mapping to a YNAB account.
@@ -84,7 +85,13 @@ func main() {
 	ctx, cancel := GetContext(*headlessFlag, *websocketFlag)
 	defer cancel()
 	decryptor := decrypt.NewDecryptor(*passphraseFileFlag)
-	balances := GetAllBalances(ctx, config.InstitutionConfig, decryptor)
+	balances, errs := GetAllBalances(ctx, config.InstitutionConfig, decryptor)
+	if len(errs) > 0 {
+		err = Email(config.EmailConfig, decryptor, errs)
+		if err != nil {
+			fmt.Printf("Error sending email with errors: %s", err)
+		}
+	}
 	err = YnabUpdateBalances(balances, config.YnabConfig, decryptor)
 	if err != nil {
 		fmt.Printf("Error updating ynab balances: %v\n", err)
@@ -93,16 +100,19 @@ func main() {
 
 // GetAllBalances gets the balances for each InstitutionConfig from the corresponding [institution.Institution]
 // and returns all balances in a map where keys are the YNAB account name and values are in cents.
-func GetAllBalances(ctx context.Context, config []InstitutionConfig, decryptor decrypt.Decryptor) map[string]int64 {
+func GetAllBalances(ctx context.Context, config []InstitutionConfig, decryptor decrypt.Decryptor) (map[string]int64, []error) {
 	balances := make(map[string]int64)
+	errors := make([]error, 0)
 	for _, ic := range config {
 		bs, err := institution.MustGet(ic.Name).GetBalances(ctx, ic.Auth, decryptor, ic.AccountMappings)
 		if err != nil {
-			fmt.Printf("Failed to get balances from %s: %v\n", ic.Name, err)
+			newErr := fmt.Errorf("failed to get balances from %s: %w", ic.Name, err)
+			errors = append(errors, newErr)
+			fmt.Println(newErr)
 		}
 		maps.Copy(balances, bs)
 	}
-	return balances
+	return balances, errors
 }
 
 // GetContext creates a new context for [chromedp]. If websocket is given, it creates a context connected to an

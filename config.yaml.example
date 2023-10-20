@@ -1,3 +1,9 @@
+email:
+  host: smtp.gmail.com
+  port: 587
+  from: your.email@gmail.com
+  to: your.email@gmail.com
+  encrypted_password: your_encrypted_email_password
 ynab:
   encrypted_access_token: your_encrypted_ynab_token
   budget_name: Your Budget Name in YNAB (Usually "My Budget" by default)
