@@ -24,7 +24,7 @@ func Email(e EmailConfig, d decrypt.Decryptor, errs []error) error {
 	fmt.Fprint(msg, "Subject: nw-updater error\r\n\r\n")
 	fmt.Fprint(msg, "nw-updater had errors:\r\n\r\n")
 	for _, theError := range errs {
-		_, err := fmt.Fprint(msg, theError.Error())
+		_, err := fmt.Fprintf(msg, "%s\r\n", theError.Error())
 		if err != nil {
 			return err
 		}
