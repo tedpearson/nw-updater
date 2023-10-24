@@ -24,6 +24,7 @@ import (
 type Auth struct {
 	Username          string
 	EncryptedPassword string `yaml:"encrypted_password"`
+	Questions         map[string]string
 }
 
 // AccountMapping contains the account name in the institution and the mapping to the YNAB account name.
