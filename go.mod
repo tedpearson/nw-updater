@@ -3,7 +3,7 @@ module nw-updater
 go 1.21
 
 require (
-	github.com/Davincible/chromedp-undetected v1.3.5
+	github.com/Davincible/chromedp-undetected v1.3.8
 	github.com/Luzifer/go-openssl/v4 v4.2.2
 	github.com/brunomvsouza/ynab.go v1.4.0
 	github.com/chromedp/cdproto v0.0.0-20230816033919-17ee49f3eb4f
