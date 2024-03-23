@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -38,6 +39,26 @@ type Institution interface {
 	GetBalances(context.Context, Auth, decrypt.Decryptor, []AccountMapping) (map[string]int64, error)
 }
 
+type SecurityCode interface {
+	RequestCode(ctx context.Context, auth Auth, d decrypt.Decryptor) (context.Context, context.CancelFunc, error)
+	EnterCode(ctx context.Context, code string) error
+	Institution
+}
+
+type Error struct {
+	Wrapped    error
+	Screenshot []byte
+	Stacktrace []byte
+}
+
+func (e Error) Error() string {
+	return e.Wrapped.Error()
+}
+
+func (e Error) Unwrap() error {
+	return e.Wrapped
+}
+
 var institutions = make(map[string]Institution)
 
 // Each Institution should register itself with this function in an init() method so that it can be looked up by name.
@@ -65,16 +86,35 @@ func newContext(ctx context.Context, urlPrefix string) (context.Context, context
 	i := slices.IndexFunc(infos, func(info *target.Info) bool {
 		return strings.HasPrefix(info.URL, urlPrefix)
 	})
-	var cancel1 context.CancelFunc
 	if i != -1 {
-		ctx, cancel1 = chromedp.NewContext(ctx, chromedp.WithTargetID(infos[i].TargetID))
+		ctx, _ = chromedp.NewContext(ctx, chromedp.WithTargetID(infos[i].TargetID))
+	} else {
+		ctx, _ = chromedp.NewContext(ctx)
 	}
-	// no targets or none match urlPrefix.
-	ctx, cancel1 = chromedp.NewContext(ctx)
-	ctx, cancel2 := context.WithTimeout(ctx, 2*time.Minute)
-	return ctx, func() {
-		cancel2()
-		cancel1()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	// create tab so we can take a screenshot later on this context.
+	if err = chromedp.Run(ctx); err != nil {
+		panic(err)
+	}
+	return ctx, cancel
+}
+
+func screenshotError(ctx context.Context, err error) error {
+	if err == nil {
+		return nil
+	}
+	var buf []byte
+	err2 := chromedp.Run(ctx, chromedp.FullScreenshot(&buf, 100))
+	if err2 != nil {
+		fmt.Printf("Failed to take screenshot of error: %s\n", err2)
+	}
+	fmt.Printf("Error: %s\n", err)
+	stack := debug.Stack()
+	fmt.Println(string(stack))
+	return Error{
+		Wrapped:    err,
+		Screenshot: buf,
+		Stacktrace: stack,
 	}
 }
 
@@ -125,4 +165,15 @@ var centsPattern = regexp.MustCompile(`\D`)
 func parseCents(str string) (int64, error) {
 	numsOnly := centsPattern.ReplaceAllString(str, "")
 	return strconv.ParseInt(numsOnly, 10, 64)
+}
+
+func UserInput(prompt string) string {
+	fmt.Print(prompt)
+	var line string
+	_, err := fmt.Scanln(&line)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println()
+	return line
 }

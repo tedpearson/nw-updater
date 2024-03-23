@@ -85,6 +85,13 @@ func main() {
 	ctx, cancel := GetContext(*headlessFlag, *websocketFlag)
 	defer cancel()
 	decryptor := decrypt.NewDecryptor(*passphraseFileFlag)
+
+	args := flag.Args()
+	if len(args) > 0 && args[0] == "security-code" {
+		SecurityCodeMain(args[1:], ctx, config.InstitutionConfig, decryptor)
+		return
+	}
+
 	balances, errs := GetAllBalances(ctx, config.InstitutionConfig, decryptor)
 	if len(errs) > 0 {
 		err = Email(config.EmailConfig, decryptor, errs)
@@ -96,6 +103,41 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error updating ynab balances: %v\n", err)
 	}
+}
+
+func SecurityCodeMain(args []string, ctx context.Context, configs []InstitutionConfig, decryptor decrypt.Decryptor) {
+	// Parse additonal args
+	fs := flag.NewFlagSet("nw-updater security-code", flag.ExitOnError)
+	instString := fs.String("institution", "", "The institution to authenticate with")
+	username := fs.String("username", "", "The username to use in the config file. Optional if there is only one for this institution.")
+	_ = fs.Parse(args)
+
+	sc, ok := institution.MustGet(*instString).(institution.SecurityCode)
+	if !ok {
+		panic(fmt.Sprintf("%s does not implement SecurityCode", *instString))
+	}
+	var instConfig *InstitutionConfig
+	for _, inst := range configs {
+		if inst.Name == *instString && (*username == "" || inst.Auth.Username == *username) {
+			instConfig = &inst
+			break
+		}
+	}
+	if instConfig == nil {
+		panic("unable to find matching institution in config")
+	}
+	ctx, cancel, err := sc.RequestCode(ctx, instConfig.Auth, decryptor)
+	if err != nil {
+		fmt.Printf("%v", err)
+		panic(err)
+	}
+	defer cancel()
+	code := institution.UserInput("Enter code: ")
+	err = sc.EnterCode(ctx, code)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Success!")
 }
 
 // GetAllBalances gets the balances for each InstitutionConfig from the corresponding [institution.Institution]
@@ -135,7 +177,5 @@ func GetContext(headless bool, websocket string) (context.Context, context.Cance
 	if err != nil {
 		panic(err)
 	}
-	return ctx, func() {
-		cancel()
-	}
+	return ctx, cancel
 }
