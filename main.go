@@ -150,7 +150,7 @@ func SecurityCodeMain(args []string, ctx context.Context, configs []InstitutionC
 // and returns all balances in a map where keys are the YNAB account name and values are in cents.
 func GetAllBalances(ctx context.Context, config []InstitutionConfig, decryptor decrypt.Decryptor) (map[string]int64, error) {
 	balances := make(map[string]int64)
-	errs := institution.MultiError{}
+	errs := &institution.MultiError{}
 	for _, ic := range config {
 		bs, err := institution.MustGet(ic.Name).GetBalances(ctx, ic.Auth, decryptor, ic.AccountMappings)
 		if err != nil {
@@ -159,6 +159,9 @@ func GetAllBalances(ctx context.Context, config []InstitutionConfig, decryptor d
 			fmt.Println(newErr)
 		}
 		maps.Copy(balances, bs)
+	}
+	if errs.IsEmpty() {
+		return balances, nil
 	}
 	return balances, errs
 }

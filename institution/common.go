@@ -48,12 +48,16 @@ type MultiError struct {
 	Errors []error
 }
 
-func (m MultiError) Error() string {
+func (m *MultiError) Error() string {
 	return m.Errors[0].Error()
 }
 
-func (m MultiError) AddError(e error) {
+func (m *MultiError) AddError(e error) {
 	m.Errors = append(m.Errors, e)
+}
+
+func (m *MultiError) IsEmpty() bool {
+	return len(m.Errors) == 0
 }
 
 type Error struct {
@@ -139,7 +143,7 @@ func getMultipleBalances(nodes []*cdp.Node, parentCtx context.Context, mapping [
 	defer cancel()
 
 	balances := make(map[string]int64)
-	errs := MultiError{}
+	errs := &MultiError{}
 	for _, node := range nodes {
 		var name, balance string
 		err := chromedp.Run(ctx,
@@ -164,7 +168,10 @@ func getMultipleBalances(nodes []*cdp.Node, parentCtx context.Context, mapping [
 			balances[mapping[mappingIndex].Mapping] = balanceNum
 		}
 	}
-	return balances, nil
+	if errs.IsEmpty() {
+		return balances, nil
+	}
+	return balances, errs
 }
 
 var centsPattern = regexp.MustCompile(`\D`)

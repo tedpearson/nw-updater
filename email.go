@@ -51,7 +51,7 @@ func Email(ec EmailConfig, d decrypt.Decryptor, e error) error {
 
 func UnwrapError(e error) []error {
 	result := make([]error, 0, 1)
-	var m institution.MultiError
+	var m *institution.MultiError
 	if errors.As(e, &m) {
 		for _, e2 := range m.Errors {
 			result = append(result, UnwrapError(e2)...)
