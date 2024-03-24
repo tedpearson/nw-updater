@@ -90,7 +90,7 @@ func main() {
 	if len(args) > 0 && args[0] == "security-code" {
 		err = SecurityCodeMain(args[1:], ctx, config.InstitutionConfig, decryptor)
 		if err != nil {
-			err = Email(config.EmailConfig, decryptor, []error{err})
+			err = Email(config.EmailConfig, decryptor, err)
 			if err != nil {
 				fmt.Printf("Error sending email with error: %s", err)
 			}
@@ -98,9 +98,9 @@ func main() {
 		return
 	}
 
-	balances, errs := GetAllBalances(ctx, config.InstitutionConfig, decryptor)
-	if len(errs) > 0 {
-		err = Email(config.EmailConfig, decryptor, errs)
+	balances, err := GetAllBalances(ctx, config.InstitutionConfig, decryptor)
+	if err != nil {
+		err = Email(config.EmailConfig, decryptor, err)
 		if err != nil {
 			fmt.Printf("Error sending email with errors: %s", err)
 		}
@@ -148,19 +148,19 @@ func SecurityCodeMain(args []string, ctx context.Context, configs []InstitutionC
 
 // GetAllBalances gets the balances for each InstitutionConfig from the corresponding [institution.Institution]
 // and returns all balances in a map where keys are the YNAB account name and values are in cents.
-func GetAllBalances(ctx context.Context, config []InstitutionConfig, decryptor decrypt.Decryptor) (map[string]int64, []error) {
+func GetAllBalances(ctx context.Context, config []InstitutionConfig, decryptor decrypt.Decryptor) (map[string]int64, error) {
 	balances := make(map[string]int64)
-	errors := make([]error, 0)
+	errs := institution.MultiError{}
 	for _, ic := range config {
 		bs, err := institution.MustGet(ic.Name).GetBalances(ctx, ic.Auth, decryptor, ic.AccountMappings)
 		if err != nil {
 			newErr := fmt.Errorf("failed to get balances from %s: %w", ic.Name, err)
-			errors = append(errors, newErr)
+			errs.AddError(newErr)
 			fmt.Println(newErr)
 		}
 		maps.Copy(balances, bs)
 	}
-	return balances, errors
+	return balances, errs
 }
 
 // GetContext creates a new context for [chromedp]. If websocket is given, it creates a context connected to an

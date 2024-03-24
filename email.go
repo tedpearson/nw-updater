@@ -21,14 +21,14 @@ type EmailConfig struct {
 }
 
 //goland:noinspection GoUnhandledErrorResult
-func Email(e EmailConfig, d decrypt.Decryptor, errs []error) error {
+func Email(ec EmailConfig, d decrypt.Decryptor, e error) error {
 	m := gomail.NewMessage()
-	m.SetHeader("From", fmt.Sprintf("nw-updater <%s>", e.From))
-	m.SetHeader("To", e.To)
+	m.SetHeader("From", fmt.Sprintf("nw-updater <%s>", ec.From))
+	m.SetHeader("To", ec.To)
 	m.SetHeader("Subject", "nw-updater error")
 	body := &strings.Builder{}
 	body.WriteString("<p><b>nw-updater had errors:</b></p><p/>\n")
-	for i, theError := range errs {
+	for i, theError := range UnwrapError(e) {
 		fmt.Fprintf(body, "<p>%s</b>\n", theError.Error())
 		var e institution.Error
 		if errors.As(theError, &e) {
@@ -45,6 +45,19 @@ func Email(e EmailConfig, d decrypt.Decryptor, errs []error) error {
 		}
 	}
 	m.SetBody("text/html", body.String())
-	dialer := gomail.NewDialer(e.Host, e.Port, e.From, d.Decrypt(e.EncryptedPassword))
+	dialer := gomail.NewDialer(ec.Host, ec.Port, ec.From, d.Decrypt(ec.EncryptedPassword))
 	return dialer.DialAndSend(m)
+}
+
+func UnwrapError(e error) []error {
+	result := make([]error, 0, 1)
+	var m institution.MultiError
+	if errors.As(e, &m) {
+		for _, e2 := range m.Errors {
+			result = append(result, UnwrapError(e2)...)
+		}
+	} else {
+		result = append(result, e)
+	}
+	return result
 }

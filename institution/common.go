@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/chromedp/cdproto/cdp"
-	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
 
@@ -43,6 +42,18 @@ type SecurityCode interface {
 	RequestCode(ctx context.Context, auth Auth, d decrypt.Decryptor) (context.Context, context.CancelFunc, error)
 	EnterCode(ctx context.Context, code string) error
 	Institution
+}
+
+type MultiError struct {
+	Errors []error
+}
+
+func (m MultiError) Error() string {
+	return m.Errors[0].Error()
+}
+
+func (m MultiError) AddError(e error) {
+	m.Errors = append(m.Errors, e)
 }
 
 type Error struct {
@@ -119,28 +130,24 @@ func screenshotError(ctx context.Context, err error) error {
 }
 
 // getMultipleBalances is a utility function used by an Institution to retrieve multiple balances from
-// a single page. The Institution provides a function to get the nodes containing the account name and balance,
+// a single page. The Institution provides the nodes containing the account name and balance,
 // and selectors for the name and balance inside each node.
-func getMultipleBalances(getNodes func(*[]*cdp.Node) error, ctx context.Context, mapping []AccountMapping,
-	nameSelector, balSelector string) (map[string]int64, error) {
-	var nodes []*cdp.Node
-	if err := getNodes(&nodes); err != nil {
-		return nil, err
-	}
+func getMultipleBalances(nodes []*cdp.Node, parentCtx context.Context, mapping []AccountMapping, nameSelector,
+	balSelector string) (map[string]int64, error) {
+
+	ctx, cancel := context.WithTimeout(parentCtx, 1*time.Minute)
+	defer cancel()
+
 	balances := make(map[string]int64)
+	errs := MultiError{}
 	for _, node := range nodes {
-		// get full node stack for possible debugging
-		_ = chromedp.Run(ctx,
-			chromedp.ActionFunc(func(ctx context.Context) error {
-				return dom.RequestChildNodes(node.NodeID).WithDepth(-1).Do(ctx)
-			}))
 		var name, balance string
 		err := chromedp.Run(ctx,
 			chromedp.TextContent(nameSelector, &name, chromedp.ByQuery, chromedp.FromNode(node)),
 			chromedp.TextContent(balSelector, &balance, chromedp.ByQuery, chromedp.FromNode(node)))
 		if err != nil {
-			fmt.Printf("Failed to find account name and balance: %v\n", err)
-			println(node.Dump("", "  ", false))
+			err = fmt.Errorf("failed to find account name and balance: %w", err)
+			errs.AddError(screenshotError(parentCtx, err))
 			continue
 		}
 		trimmedName := strings.TrimSpace(name)
@@ -150,7 +157,8 @@ func getMultipleBalances(getNodes func(*[]*cdp.Node) error, ctx context.Context,
 		if mappingIndex != -1 {
 			balanceNum, err := parseCents(balance)
 			if err != nil {
-				fmt.Printf("Failed to parse balance '%s': %v\n", balance, err)
+				err = fmt.Errorf("failed to parse balance '%s': %w", balance, err)
+				errs.AddError(screenshotError(parentCtx, err))
 				continue
 			}
 			balances[mapping[mappingIndex].Mapping] = balanceNum

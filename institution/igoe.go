@@ -3,6 +3,7 @@ package institution
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
@@ -20,22 +21,28 @@ func init() {
 type igoe struct {
 }
 
-func (i igoe) GetBalances(ctx context.Context, auth Auth, d decrypt.Decryptor, mapping []AccountMapping) (map[string]int64, error) {
-	ctx, cancel := newContext(ctx, igoeUrlPrefix)
+func (i igoe) GetBalances(parentCtx context.Context, auth Auth, d decrypt.Decryptor, mapping []AccountMapping) (map[string]int64, error) {
+	browserCtx, cancel := newContext(parentCtx, igoeUrlPrefix)
 	defer cancel()
-	err := i.auth(ctx, auth, d)
+	err := i.auth(browserCtx, auth, d)
 	if err != nil {
 		return nil, err
 	}
 
-	return getMultipleBalances(func(nodes *[]*cdp.Node) error {
-		return chromedp.Run(ctx,
-			chromedp.Nodes(".b-dashboard-accounts-item", nodes, chromedp.ByQueryAll))
-	}, ctx, mapping, ".b-dashboard-accounts-name", ".b-dashboard-accounts-balance .currency-span")
+	ctx, cancel := context.WithTimeout(browserCtx, 1*time.Minute)
+	defer cancel()
+	var nodes []*cdp.Node
+	err = chromedp.Run(ctx, chromedp.Nodes(".b-dashboard-accounts-item", &nodes, chromedp.ByQueryAll))
+	if err != nil {
+		return nil, screenshotError(browserCtx, err)
+	}
+	return getMultipleBalances(nodes, browserCtx, mapping,
+		".b-dashboard-accounts-name", ".b-dashboard-accounts-balance .currency-span")
 }
 
-func (i igoe) auth(ctx context.Context, auth Auth, d decrypt.Decryptor) error {
-
+func (i igoe) auth(parentCtx context.Context, auth Auth, d decrypt.Decryptor) error {
+	ctx, cancel := context.WithTimeout(parentCtx, 1*time.Minute)
+	defer cancel()
 	var questions []*cdp.Node
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(igoeLoginUrl),
@@ -43,10 +50,9 @@ func (i igoe) auth(ctx context.Context, auth Auth, d decrypt.Decryptor) error {
 		chromedp.SetValue("#password", d.Decrypt(auth.EncryptedPassword), chromedp.ByQuery),
 		chromedp.Click(".button-subm", chromedp.ByQuery),
 		chromedp.WaitVisible("accounts-summary-mini,div.secq-form", chromedp.ByQuery),
-		chromedp.Nodes("div.secq-form div.field-label label", &questions, chromedp.ByQueryAll, chromedp.AtLeast(0)),
-	)
+		chromedp.Nodes("div.secq-form div.field-label label", &questions, chromedp.ByQueryAll, chromedp.AtLeast(0)))
 	if err != nil {
-		return err
+		return screenshotError(parentCtx, err)
 	}
 	if len(questions) == 0 {
 		return nil
@@ -56,20 +62,21 @@ func (i igoe) auth(ctx context.Context, auth Auth, d decrypt.Decryptor) error {
 		err := chromedp.Run(ctx,
 			chromedp.TextContent([]cdp.NodeID{node.NodeID}, &question, chromedp.ByNodeID))
 		if err != nil {
-			return err
+			return screenshotError(parentCtx, err)
 		}
 		answer, ok := auth.Questions[question]
 		if !ok {
-			return fmt.Errorf("did not have answer to question: %s", question)
+			return screenshotError(parentCtx, fmt.Errorf("did not have answer to question: %s", question))
 		}
 		id := node.AttributeValue("for")
 		err = chromedp.Run(ctx,
 			chromedp.SetValue(fmt.Sprintf("#%s", id), answer, chromedp.ByQuery))
 		if err != nil {
-			return err
+			return screenshotError(parentCtx, err)
 		}
 	}
-	return chromedp.Run(ctx,
+	err = chromedp.Run(ctx,
 		chromedp.Click(".button-subm", chromedp.ByQuery),
 		chromedp.WaitVisible("accounts-summary-mini", chromedp.ByQuery))
+	return screenshotError(parentCtx, err)
 }
