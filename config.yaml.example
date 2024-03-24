@@ -17,10 +17,3 @@ institutions:
         mapping: Your Account Name in YNAB
       - name: Your Second Account
         mapping: Your Second Account in YNAB
-  - name: netbenefits
-    auth:
-      username: your_username
-      encrypted_password: your_encrypted_password
-    accounts:
-      - name: Your Account Name in Fidelity
-        mapping: Your Account Name in YNAB
