@@ -8,6 +8,7 @@ require (
 	github.com/brunomvsouza/ynab.go v1.4.0
 	github.com/chromedp/cdproto v0.0.0-20240312231614-1e5096e63154
 	github.com/chromedp/chromedp v0.9.5
+	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -24,4 +25,5 @@ require (
 	golang.org/x/exp v0.0.0-20240318143956-a85f2c67cd81 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
+	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 )
