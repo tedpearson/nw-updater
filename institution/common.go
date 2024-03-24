@@ -169,6 +169,8 @@ func parseCents(str string) (int64, error) {
 
 func UserInput(prompt string) string {
 	fmt.Print(prompt)
+	// ring bell
+	fmt.Print("\a")
 	var line string
 	_, err := fmt.Scanln(&line)
 	if err != nil {
