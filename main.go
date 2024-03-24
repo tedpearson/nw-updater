@@ -88,7 +88,13 @@ func main() {
 
 	args := flag.Args()
 	if len(args) > 0 && args[0] == "security-code" {
-		SecurityCodeMain(args[1:], ctx, config.InstitutionConfig, decryptor)
+		err = SecurityCodeMain(args[1:], ctx, config.InstitutionConfig, decryptor)
+		if err != nil {
+			err = Email(config.EmailConfig, decryptor, []error{err})
+			if err != nil {
+				fmt.Printf("Error sending email with error: %s", err)
+			}
+		}
 		return
 	}
 
@@ -105,7 +111,7 @@ func main() {
 	}
 }
 
-func SecurityCodeMain(args []string, ctx context.Context, configs []InstitutionConfig, decryptor decrypt.Decryptor) {
+func SecurityCodeMain(args []string, ctx context.Context, configs []InstitutionConfig, decryptor decrypt.Decryptor) error {
 	// Parse additonal args
 	fs := flag.NewFlagSet("nw-updater security-code", flag.ExitOnError)
 	instString := fs.String("institution", "", "The institution to authenticate with")
@@ -128,16 +134,16 @@ func SecurityCodeMain(args []string, ctx context.Context, configs []InstitutionC
 	}
 	ctx, cancel, err := sc.RequestCode(ctx, instConfig.Auth, decryptor)
 	if err != nil {
-		fmt.Printf("%v", err)
-		panic(err)
+		return err
 	}
 	defer cancel()
 	code := institution.UserInput("Enter code: ")
 	err = sc.EnterCode(ctx, code)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	fmt.Println("Success!")
+	return nil
 }
 
 // GetAllBalances gets the balances for each InstitutionConfig from the corresponding [institution.Institution]

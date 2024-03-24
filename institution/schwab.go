@@ -47,7 +47,7 @@ func (s schwab) RequestCode(ctx context.Context, auth Auth, d decrypt.Decryptor)
 		}
 		fmt.Println("Found SMS numbers:")
 		for i, number := range numbers {
-			fmt.Printf("%d: %s", i+1, number)
+			fmt.Printf("%d: %s\n", i+1, number)
 		}
 		chosen := UserInput("Choose one: ")
 		index, err := strconv.ParseUint(chosen, 10, 8)
@@ -57,7 +57,7 @@ func (s schwab) RequestCode(ctx context.Context, auth Auth, d decrypt.Decryptor)
 		if int(index-1) > len(numbers) {
 			return nil, nil, errors.New("index out of range")
 		}
-		err = s.sendCode(ctx, nodeIds[index])
+		err = s.sendCode(ctx, nodeIds[index-1])
 		if err != nil {
 			return nil, nil, err
 		}
