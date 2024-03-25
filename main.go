@@ -37,6 +37,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"time"
 
 	"github.com/chromedp/chromedp"
 	"gopkg.in/yaml.v3"
@@ -159,6 +160,8 @@ func GetAllBalances(ctx context.Context, config []InstitutionConfig, decryptor d
 			fmt.Println(newErr)
 		}
 		maps.Copy(balances, bs)
+		// note: there is some strange issue occurring where the next new browser tab context fails to open without a sleep here.
+		time.Sleep(1 * time.Second)
 	}
 	if errs.IsEmpty() {
 		return balances, nil

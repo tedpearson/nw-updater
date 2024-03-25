@@ -101,17 +101,21 @@ func newContext(ctx context.Context, urlPrefix string) (context.Context, context
 	i := slices.IndexFunc(infos, func(info *target.Info) bool {
 		return strings.HasPrefix(info.URL, urlPrefix)
 	})
+	var cancel1 context.CancelFunc
 	if i != -1 {
-		ctx, _ = chromedp.NewContext(ctx, chromedp.WithTargetID(infos[i].TargetID))
+		ctx, cancel1 = chromedp.NewContext(ctx, chromedp.WithTargetID(infos[i].TargetID))
 	} else {
-		ctx, _ = chromedp.NewContext(ctx)
+		ctx, cancel1 = chromedp.NewContext(ctx)
 	}
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	ctx, cancel2 := context.WithTimeout(ctx, 5*time.Minute)
 	// create tab so we can take a screenshot later on this context.
 	if err = chromedp.Run(ctx); err != nil {
 		panic(err)
 	}
-	return ctx, cancel
+	return ctx, func() {
+		cancel2()
+		cancel1()
+	}
 }
 
 func screenshotError(ctx context.Context, err error) error {
@@ -119,13 +123,13 @@ func screenshotError(ctx context.Context, err error) error {
 		return nil
 	}
 	var buf []byte
+	fmt.Printf("Error: %s\n", err)
+	stack := debug.Stack()
+	fmt.Println(string(stack))
 	err2 := chromedp.Run(ctx, chromedp.FullScreenshot(&buf, 100))
 	if err2 != nil {
 		fmt.Printf("Failed to take screenshot of error: %s\n", err2)
 	}
-	fmt.Printf("Error: %s\n", err)
-	stack := debug.Stack()
-	fmt.Println(string(stack))
 	return Error{
 		Wrapped:    err,
 		Screenshot: buf,
