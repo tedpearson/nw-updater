@@ -28,11 +28,11 @@ func (f fidelity) RequestCode(ctx context.Context, auth Auth, d decrypt.Decrypto
 			cancel()
 		}
 	}()
-	result, screenshot := f.startAuth(ctx, auth.Username, d.Decrypt(auth.EncryptedPassword))
+	result, err := f.startAuth(ctx, auth.Username, d.Decrypt(auth.EncryptedPassword))
 	// ensure it asks for security code
 	switch result {
 	case LoginError:
-		return nil, nil, screenshot
+		return nil, nil, err
 	case LoginOk:
 		return nil, nil, errors.New("login successful, no security code needed")
 	case CodeRequired:
@@ -97,9 +97,9 @@ func (f fidelity) startAuth(parentCtx context.Context, username, password string
 		return LoginError, screenshotError(parentCtx, err)
 	}
 	if len(accountNodes) == 0 {
-		return CodeRequired, nil
+		return CodeRequired, screenshotError(parentCtx, errors.New("code required"))
 	}
-	return LoginOk, nil
+	return LoginOk, errors.New("login ok")
 }
 
 func (f fidelity) sendCode(parentCtx context.Context) error {
