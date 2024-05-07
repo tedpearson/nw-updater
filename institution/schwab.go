@@ -103,14 +103,6 @@ func (s schwab) GetBalances(ctx context.Context, auth Auth, d decrypt.Decryptor,
 	}, nil
 }
 
-type LoginResult uint8
-
-const (
-	LoginError LoginResult = iota
-	LoginOk
-	CodeRequired
-)
-
 func (s schwab) startAuth(parentCtx context.Context, username, password string) (LoginResult, error) {
 	ctx, cancel := context.WithTimeout(parentCtx, 1*time.Minute)
 	defer cancel()

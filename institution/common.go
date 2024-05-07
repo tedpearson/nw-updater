@@ -33,6 +33,14 @@ type AccountMapping struct {
 	Mapping string
 }
 
+type LoginResult uint8
+
+const (
+	LoginError LoginResult = iota
+	LoginOk
+	CodeRequired
+)
+
 // An Institution gets the balances for the given slice of [AccountMapping].
 type Institution interface {
 	GetBalances(context.Context, Auth, decrypt.Decryptor, []AccountMapping) (map[string]int64, error)
