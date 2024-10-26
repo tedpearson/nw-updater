@@ -22,6 +22,7 @@ type EmailConfig struct {
 
 //goland:noinspection GoUnhandledErrorResult
 func Email(ec EmailConfig, d decrypt.Decryptor, e error) error {
+	fmt.Printf("Error, sending email: %s", e)
 	m := gomail.NewMessage()
 	m.SetHeader("From", fmt.Sprintf("nw-updater <%s>", ec.From))
 	m.SetHeader("To", ec.To)
