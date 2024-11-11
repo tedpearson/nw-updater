@@ -7,7 +7,7 @@ require (
 	github.com/Luzifer/go-openssl/v4 v4.2.2
 	github.com/brunomvsouza/ynab.go v1.4.0
 	github.com/chromedp/cdproto v0.0.0-20241022234722-4d5d5faf59fb
-	github.com/chromedp/chromedp v0.11.1
+	github.com/chromedp/chromedp v0.11.2
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/yaml.v3 v3.0.1
 )
