@@ -153,9 +153,9 @@ func GetAllBalances(ctx context.Context, config []InstitutionConfig, decryptor d
 	balances := make(map[string]int64)
 	errs := &institution.MultiError{}
 	for _, ic := range config {
-		fmt.Printf("Getting balances at %s for %s", ic.Name, ic.Auth.Username)
+		fmt.Printf("Getting balances at %s for %s\n", ic.Name, ic.Auth.Username)
 		bs, err := institution.MustGet(ic.Name).GetBalances(ctx, ic.Auth, decryptor, ic.AccountMappings)
-		fmt.Printf("Found %d matching balances", len(bs))
+		fmt.Printf("Found %d matching balances\n", len(bs))
 		if err != nil {
 			newErr := fmt.Errorf("failed to get balances from %s: %w", ic.Name, err)
 			errs.AddError(newErr)
