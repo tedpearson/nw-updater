@@ -79,7 +79,7 @@ func (f fidelity) GetBalances(parentCtx context.Context, auth Auth, d decrypt.De
 		return nil, screenshotError(browserCtx, err)
 	}
 	return getMultipleBalances(nodes, browserCtx, mapping,
-		".acct-selector__acct-name", ".acct-selector__acct-balance span:not(.sr-only)")
+		".acct-selector__acct-name span:not(.sr-only)", ".acct-selector__acct-balance span:not(.sr-only)")
 }
 
 func (f fidelity) startAuth(parentCtx context.Context, username, password string) (LoginResult, error) {
