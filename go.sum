@@ -1,7 +1,7 @@
 github.com/Davincible/chromedp-undetected v1.3.8 h1:Glt5Faaz3oeDrBZs1NPWjqJeSnbFCMkBvCCFqbrJHnE=
 github.com/Davincible/chromedp-undetected v1.3.8/go.mod h1:8ThyCTNGAhCc9I8q3fA5lunyNiFMaLcvhL0wpxWUi7A=
-github.com/Luzifer/go-openssl/v4 v4.2.2 h1:wKF/GhSKGJtHFQYTkN61wXig7mPvDj/oPpW6MmnBpjc=
-github.com/Luzifer/go-openssl/v4 v4.2.2/go.mod h1:+kAwI4NpyYXoWil85gKSCEJNoCQlMeFikEMn2f+5ffc=
+github.com/Luzifer/go-openssl/v4 v4.2.4 h1:3Eu3gSeZpr8Ha+IofVnSWttCL1xejRr/lda4l4TZRWk=
+github.com/Luzifer/go-openssl/v4 v4.2.4/go.mod h1:ykquxaR0R1Vor83/FAtGBJZZO5zswuSQTVx1FQc1bJY=
 github.com/Xuanwo/go-locale v1.1.0 h1:51gUxhxl66oXAjI9uPGb2O0qwPECpriKQb2hl35mQkg=
 github.com/Xuanwo/go-locale v1.1.0/go.mod h1:UKrHoZB3FPIk9wIG2/tVSobnHgNnceGSH3Y8DY5cASs=
 github.com/brunomvsouza/ynab.go v1.4.0 h1:j32NsAq74sxWtfi16cFrn/aj2K8sZpaXPlcJiB9bwRk=
