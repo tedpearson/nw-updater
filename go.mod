@@ -4,7 +4,7 @@ go 1.23
 
 require (
 	github.com/Davincible/chromedp-undetected v1.3.8
-	github.com/Luzifer/go-openssl/v4 v4.2.2
+	github.com/Luzifer/go-openssl/v4 v4.2.4
 	github.com/brunomvsouza/ynab.go v1.4.0
 	github.com/chromedp/cdproto v0.0.0-20241022234722-4d5d5faf59fb
 	github.com/chromedp/chromedp v0.11.2
