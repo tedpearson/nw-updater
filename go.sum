@@ -4,8 +4,6 @@ github.com/Luzifer/go-openssl/v4 v4.2.4 h1:3Eu3gSeZpr8Ha+IofVnSWttCL1xejRr/lda4l
 github.com/Luzifer/go-openssl/v4 v4.2.4/go.mod h1:ykquxaR0R1Vor83/FAtGBJZZO5zswuSQTVx1FQc1bJY=
 github.com/Xuanwo/go-locale v1.1.0 h1:51gUxhxl66oXAjI9uPGb2O0qwPECpriKQb2hl35mQkg=
 github.com/Xuanwo/go-locale v1.1.0/go.mod h1:UKrHoZB3FPIk9wIG2/tVSobnHgNnceGSH3Y8DY5cASs=
-github.com/brunomvsouza/ynab.go v1.4.0 h1:j32NsAq74sxWtfi16cFrn/aj2K8sZpaXPlcJiB9bwRk=
-github.com/brunomvsouza/ynab.go v1.4.0/go.mod h1:u5zDi6NY53RIqel+hzVodPr0CuZ0ZONbf03cex+kods=
 github.com/chromedp/cdproto v0.0.0-20241022234722-4d5d5faf59fb h1:noKVm2SsG4v0Yd0lHNtFYc9EUxIVvrr4kJ6hM8wvIYU=
 github.com/chromedp/cdproto v0.0.0-20241022234722-4d5d5faf59fb/go.mod h1:4XqMl3iIW08jtieURWL6Tt5924w21pxirC6th662XUM=
 github.com/chromedp/chromedp v0.11.2 h1:ZRHTh7DjbNTlfIv3NFTbB7eVeu5XCNkgrpcGSpn2oX0=
@@ -49,6 +47,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
+github.com/tedpearson/ynab.go v0.0.0-20250201190156-074142c807a2 h1:oWTIWqx7VPsgdD28r5BxsYJZggBQaTql7ftGz+Vec9s=
+github.com/tedpearson/ynab.go v0.0.0-20250201190156-074142c807a2/go.mod h1:u5zDi6NY53RIqel+hzVodPr0CuZ0ZONbf03cex+kods=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.31.0 h1:ihbySMvVjLAeSH1IbfcRTkD/iNscyz8rGzjF/E5hV6U=
 golang.org/x/crypto v0.31.0/go.mod h1:kDsLvtWBEx7MV9tJOj9bnXsPbxwJQ6csT/x4KIN4Ssk=

@@ -12,6 +12,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
+replace github.com/brunomvsouza/ynab.go => github.com/tedpearson/ynab.go v0.0.0-20250201190156-074142c807a2
+
 require (
 	github.com/Xuanwo/go-locale v1.1.0 // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
