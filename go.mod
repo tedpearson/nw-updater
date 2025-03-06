@@ -1,8 +1,8 @@
 module nw-updater
 
-go 1.24
+go 1.23
 
-toolchain go1.24.1
+toolchain go1.23.7
 
 require (
 	github.com/Davincible/chromedp-undetected v1.3.8
