@@ -36,10 +36,6 @@ func (f fidelity) RequestCode(ctx context.Context, auth Auth, d decrypt.Decrypto
 	case LoginOk:
 		return nil, nil, errors.New("login successful, no security code needed")
 	case CodeRequired:
-		err := f.sendCode(ctx)
-		if err != nil {
-			return nil, nil, err
-		}
 		// keep browser open! don't close context
 		doCancel = false
 		return ctx, cancel, nil
@@ -53,9 +49,9 @@ func (f fidelity) EnterCode(parentCtx context.Context, code string) error {
 	defer cancel()
 	// enter code into existing browser
 	err := chromedp.Run(ctx,
-		chromedp.SetValue("#dom-otp-code-input", code),
+		chromedp.SetValue("#dom-totp-security-code-input", code),
 		chromedp.Click("#dom-trust-device-checkbox"),
-		chromedp.Click("#dom-otp-code-submit-button"),
+		chromedp.Click("#dom-totp-code-continue-button"),
 		chromedp.WaitVisible(".acct-selector__acct-list"))
 	return screenshotError(parentCtx, err)
 }
@@ -91,7 +87,7 @@ func (f fidelity) startAuth(parentCtx context.Context, username, password string
 		chromedp.SetValue("#dom-username-input", username),
 		chromedp.SetValue("#dom-pswd-input", password),
 		chromedp.Click("#dom-login-button"),
-		chromedp.WaitVisible("//*[contains(@class,\"acct-selector__acct-list\")] | //h1[contains(.,\"To verify it's you\")]"),
+		chromedp.WaitVisible("//*[contains(@class,\"acct-selector__acct-list\")] | //h1[contains(.,\"Enter the code from your authenticator app\")]"),
 		chromedp.Nodes(".acct-selector__acct-list", &accountNodes, chromedp.AtLeast(0)))
 	if err != nil {
 		return LoginError, screenshotError(parentCtx, err)
@@ -100,12 +96,4 @@ func (f fidelity) startAuth(parentCtx context.Context, username, password string
 		return CodeRequired, screenshotError(parentCtx, errors.New("code required"))
 	}
 	return LoginOk, errors.New("login ok")
-}
-
-func (f fidelity) sendCode(parentCtx context.Context) error {
-	ctx, cancel := context.WithTimeout(parentCtx, 1*time.Minute)
-	defer cancel()
-	err := chromedp.Run(ctx,
-		chromedp.Click("button.pvd-button--primary"))
-	return screenshotError(parentCtx, err)
 }
