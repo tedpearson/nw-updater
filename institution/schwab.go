@@ -132,9 +132,30 @@ func (s schwab) startAuth(parentCtx context.Context, username, password string) 
 		return LoginError, errs
 	}
 	err = chromedp.Run(ctx, chromedp.Click("#btnLogin", chromedp.ByQuery, chromedp.FromNode(iframes[0])),
+		chromedp.Sleep(1*time.Second))
+	errs.AddError(screenshotError(parentCtx, errors.New("screenshot4")))
+	if err != nil {
+		errs.AddError(err)
+		return LoginError, errs
+	}
+	err = chromedp.Run(ctx, chromedp.Navigate("https://sws-gateway.schwab.com/ui/canary/#/login-one-step"),
+		chromedp.Sleep(2*time.Second))
+	errs.AddError(screenshotError(parentCtx, errors.New("screenshot5")))
+	if err != nil {
+		errs.AddError(err)
+		return LoginError, errs
+	}
+	err = chromedp.Run(ctx, chromedp.SetValue("#loginIdInput", username, chromedp.ByQuery, chromedp.FromNode(iframes[0])),
+		chromedp.SetValue("#passwordInput", password, chromedp.ByQuery, chromedp.FromNode(iframes[0])))
+	errs.AddError(screenshotError(parentCtx, errors.New("screenshot6")))
+	if err != nil {
+		errs.AddError(err)
+		return LoginError, errs
+	}
+	err = chromedp.Run(ctx, chromedp.Click("#btnLogin", chromedp.ByQuery, chromedp.FromNode(iframes[0])),
 		chromedp.WaitVisible("#retirement-widget-container,#otp_sms", chromedp.ByQuery),
 		chromedp.Nodes("#otp_sms", &sms, chromedp.AtLeast(0)))
-	errs.AddError(screenshotError(parentCtx, errors.New("screenshot4")))
+	errs.AddError(screenshotError(parentCtx, errors.New("screenshot7")))
 	if err != nil {
 		errs.AddError(err)
 		return LoginError, errs
