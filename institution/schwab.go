@@ -134,13 +134,17 @@ func (s schwab) startAuth(parentCtx context.Context, username, password string) 
 	err = chromedp.Run(ctx, chromedp.Click("#btnLogin", chromedp.ByQuery, chromedp.FromNode(iframes[0])),
 		chromedp.WaitVisible("#retirement-widget-container,#otp_sms", chromedp.ByQuery),
 		chromedp.Nodes("#otp_sms", &sms, chromedp.AtLeast(0)))
+	errs.AddError(screenshotError(parentCtx, errors.New("screenshot4")))
 	if err != nil {
-		return LoginError, screenshotError(parentCtx, err)
+		errs.AddError(err)
+		return LoginError, errs
 	}
 	if len(sms) == 0 {
-		return LoginOk, errors.New("login ok")
+		errs.AddError(errors.New("login ok"))
+		return LoginOk, errs
 	}
-	return CodeRequired, screenshotError(parentCtx, errors.New("code required"))
+	errs.AddError(errors.New("code required"))
+	return CodeRequired, errs
 }
 
 func (s schwab) getNumbers(parentCtx context.Context) ([]string, []cdp.NodeID, error) {
