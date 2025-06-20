@@ -104,21 +104,34 @@ func (s schwab) GetBalances(ctx context.Context, auth Auth, d decrypt.Decryptor,
 }
 
 func (s schwab) startAuth(parentCtx context.Context, username, password string) (LoginResult, error) {
-	ctx, cancel := context.WithTimeout(parentCtx, 1*time.Minute)
+	ctx, cancel := context.WithTimeout(parentCtx, 2*time.Minute)
 	defer cancel()
+	errs := &MultiError{}
 	var iframes []*cdp.Node
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(schwabLoginUrl),
-		chromedp.Sleep(1*time.Second),
-		chromedp.Nodes("div.bcn-panel__body iframe", &iframes, chromedp.ByQueryAll))
+		chromedp.Sleep(1*time.Second))
+	errs.AddError(screenshotError(parentCtx, errors.New("screenshot1")))
 	if err != nil {
-		return LoginError, screenshotError(parentCtx, err)
+		errs.AddError(err)
+		return LoginError, errs
+	}
+	err = chromedp.Run(ctx, chromedp.Nodes("div.bcn-panel__body iframe", &iframes, chromedp.ByQueryAll))
+	errs.AddError(screenshotError(parentCtx, errors.New("screenshot2")))
+	if err != nil {
+		errs.AddError(err)
+		return LoginError, errs
 	}
 	var sms []*cdp.Node
 	err = chromedp.Run(ctx,
 		chromedp.SetValue("#loginIdInput", username, chromedp.ByQuery, chromedp.FromNode(iframes[0])),
-		chromedp.SetValue("#passwordInput", password, chromedp.ByQuery, chromedp.FromNode(iframes[0])),
-		chromedp.Click("#btnLogin", chromedp.ByQuery, chromedp.FromNode(iframes[0])),
+		chromedp.SetValue("#passwordInput", password, chromedp.ByQuery, chromedp.FromNode(iframes[0])))
+	errs.AddError(screenshotError(parentCtx, errors.New("screenshot3")))
+	if err != nil {
+		errs.AddError(err)
+		return LoginError, errs
+	}
+	err = chromedp.Run(ctx, chromedp.Click("#btnLogin", chromedp.ByQuery, chromedp.FromNode(iframes[0])),
 		chromedp.WaitVisible("#retirement-widget-container,#otp_sms", chromedp.ByQuery),
 		chromedp.Nodes("#otp_sms", &sms, chromedp.AtLeast(0)))
 	if err != nil {
