@@ -8,7 +8,7 @@ import (
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
 
-	"nw-updater/decrypt"
+	"nw-updater/crypto"
 )
 
 const igoeLoginUrl = "https://goigoe.wealthcareportal.com/Authentication/Handshake"
@@ -21,7 +21,7 @@ func init() {
 type igoe struct {
 }
 
-func (i igoe) GetBalances(parentCtx context.Context, auth Auth, d decrypt.Decryptor, mapping []AccountMapping) (map[string]int64, error) {
+func (i igoe) GetBalances(parentCtx context.Context, auth Auth, d crypto.OpenSslDecryptor, mappings map[string]string) (map[string]int64, error) {
 	browserCtx, cancel := newContext(parentCtx, igoeUrlPrefix)
 	defer cancel()
 	err := i.auth(browserCtx, auth, d)
@@ -36,11 +36,11 @@ func (i igoe) GetBalances(parentCtx context.Context, auth Auth, d decrypt.Decryp
 	if err != nil {
 		return nil, screenshotError(browserCtx, err)
 	}
-	return getMultipleBalances(nodes, browserCtx, mapping,
+	return getMultipleBalances(nodes, browserCtx, mappings,
 		".b-dashboard-accounts-name", ".b-dashboard-accounts-balance .currency-span")
 }
 
-func (i igoe) auth(parentCtx context.Context, auth Auth, d decrypt.Decryptor) error {
+func (i igoe) auth(parentCtx context.Context, auth Auth, d crypto.OpenSslDecryptor) error {
 	ctx, cancel := context.WithTimeout(parentCtx, 1*time.Minute)
 	defer cancel()
 	var questions []*cdp.Node

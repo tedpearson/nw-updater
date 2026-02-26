@@ -1,3 +1,6 @@
 .idea
 config.yaml
 .passphrase
+access_url.txt
+mapping.yaml
+nw_updater

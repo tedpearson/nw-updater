@@ -1,9 +1,17 @@
+mapping_file: mapping.yaml
 email:
   host: smtp.gmail.com
   port: 587
   from: your.email@gmail.com
   to: your.email@gmail.com
   encrypted_password: your_encrypted_email_password
+simplefin:
+  passphrase: your_simplefin_passphrase
+  token_dir: /var/lib/simplefin
+actual:
+  api_key: your_actual_http_api_key
+  api_url: https://localhost
+  sync_id: your_actual_sync_id
 ynab:
   encrypted_access_token: your_encrypted_ynab_token
   budget_name: Your Budget Name in YNAB (Usually "My Budget" by default)
@@ -13,7 +21,5 @@ institutions:
       username: your_username
       encrypted_password: your_encrypted_password
     accounts:
-      - name: Your Account Name in Fidelity
-        mapping: Your Account Name in YNAB
-      - name: Your Second Account
-        mapping: Your Second Account in YNAB
+      "Your Account Name in Fidelity": Your Account Name in YNAB
+      "Your Second Account": Your Second Account in YNAB

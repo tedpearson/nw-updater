@@ -44,22 +44,25 @@ import (
 
 	cu "github.com/Davincible/chromedp-undetected"
 
-	"nw-updater/decrypt"
+	"nw-updater/crypto"
 	"nw-updater/institution"
 )
 
 // Config contains the fields read from the config.yaml file.
 type Config struct {
+	MappingFile       string              `yaml:"mapping_file"`
 	InstitutionConfig []InstitutionConfig `yaml:"institutions"`
-	YnabConfig        YnabConfig          `yaml:"ynab"`
+	SimpleFinConfig   *SimpleFinConfig    `yaml:"simplefin"`
+	YnabConfig        *YnabConfig         `yaml:"ynab"`
+	ActualConfig      *ActualConfig       `yaml:"actual"`
 	EmailConfig       EmailConfig         `yaml:"email"`
 }
 
 // InstitutionConfig contains the configs for an account at an institution along with the mapping to a YNAB account.
 type InstitutionConfig struct {
-	Name            string                       // The name of the institution, for finding the correct instance to get balances
-	Auth            institution.Auth             // The credentials to log in to the institution
-	AccountMappings []institution.AccountMapping `yaml:"accounts"` // The mapping from name in the institution to name in YNAB
+	Name            string            // The name of the institution, for finding the correct instance to get balances
+	Auth            institution.Auth  // The credentials to log in to the institution
+	AccountMappings map[string]string `yaml:"accounts"` // The mapping from name in the institution to name in YNAB
 }
 
 func main() {
@@ -85,34 +88,94 @@ func main() {
 
 	ctx, cancel := GetContext(*headlessFlag, *websocketFlag)
 	defer cancel()
-	decryptor := decrypt.NewDecryptor(*passphraseFileFlag)
-
+	decryptor := crypto.NewOpenSslDecryptor(*passphraseFileFlag)
 	args := flag.Args()
-	if len(args) > 0 && args[0] == "security-code" {
-		err = SecurityCodeMain(args[1:], ctx, config.InstitutionConfig, decryptor)
-		if err != nil {
-			err = Email(config.EmailConfig, decryptor, err)
-			if err != nil {
-				fmt.Printf("Error sending email with error: %s", err)
-			}
+	if len(args) > 0 {
+		switch args[0] {
+		case "security-code":
+			err = SecurityCodeMain(args[1:], ctx, config.InstitutionConfig, decryptor)
+		case "simplefin-auth":
+			err = SimpleFinAuthMain(args[1:], *config.SimpleFinConfig)
+		case "setup":
+			err = SimpleFinSetupMain(config)
+		default:
+			panic("unsupported command: " + args[0])
 		}
-		return
+	} else {
+		err = StandardMain(config, ctx, decryptor)
 	}
-
-	balances, err := GetAllBalances(ctx, config.InstitutionConfig, decryptor)
 	if err != nil {
 		err = Email(config.EmailConfig, decryptor, err)
 		if err != nil {
-			fmt.Printf("Error sending email with errors: %s", err)
+			fmt.Printf("Error sending email with error: %s", err)
 		}
 	}
-	err = YnabUpdateBalances(balances, config.YnabConfig, decryptor)
-	if err != nil {
-		fmt.Printf("Error updating ynab balances: %v\n", err)
+
+}
+
+func StandardMain(config Config, ctx context.Context, decryptor crypto.OpenSslDecryptor) error {
+	if config.SimpleFinConfig == nil {
+		balances, err := GetAllBalances(ctx, config.InstitutionConfig, decryptor)
+		if err != nil {
+			err = Email(config.EmailConfig, decryptor, err)
+			if err != nil {
+				fmt.Printf("Error sending email with errors: %s", err)
+			}
+		}
+		err = YnabUpdateBalances(balances, *config.YnabConfig, decryptor)
+		if err != nil {
+			return fmt.Errorf("error updating ynab balances: %w", err)
+		}
+		return nil
+	} else {
+		simpleFin := new(SimpleFin)
+		simpleFin.SimpleFinConfig = *config.SimpleFinConfig
+		mappings, err := ReadMappingFile(config.MappingFile)
+		if err != nil {
+			return err
+		}
+		balances, err := simpleFin.GetBalances(mappings)
+		if err != nil {
+			return err
+		}
+		actual := new(ActualBudget)
+		actual.ActualConfig = *config.ActualConfig
+		return actual.UpdateBalances(balances)
 	}
 }
 
-func SecurityCodeMain(args []string, ctx context.Context, configs []InstitutionConfig, decryptor decrypt.Decryptor) error {
+func ReadMappingFile(mappingFile string) (map[string]string, error) {
+	if _, err := os.Stat(mappingFile); os.IsNotExist(err) {
+		return make(map[string]string), nil
+	}
+	f, err := os.Open(mappingFile)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	var mappings map[string]string
+	err = yaml.NewDecoder(f).Decode(&mappings)
+	return mappings, err
+}
+
+func SimpleFinAuthMain(args []string, config SimpleFinConfig) error {
+	fs := flag.NewFlagSet("nw-updater simplefin-auth", flag.ExitOnError)
+	token := fs.String("token", "", "The token to authenticate with")
+	_ = fs.Parse(args)
+	sf := new(SimpleFin)
+	sf.SimpleFinConfig = config
+	return sf.Authenticate(*token)
+}
+
+func SimpleFinSetupMain(config Config) error {
+	sf := new(SimpleFin)
+	sf.SimpleFinConfig = *config.SimpleFinConfig
+	ab := new(ActualBudget)
+	ab.ActualConfig = *config.ActualConfig
+	return Setup(*sf, *ab, config.MappingFile)
+}
+
+func SecurityCodeMain(args []string, ctx context.Context, configs []InstitutionConfig, decryptor crypto.OpenSslDecryptor) error {
 	// Parse additonal args
 	fs := flag.NewFlagSet("nw-updater security-code", flag.ExitOnError)
 	instString := fs.String("institution", "", "The institution to authenticate with")
@@ -149,7 +212,7 @@ func SecurityCodeMain(args []string, ctx context.Context, configs []InstitutionC
 
 // GetAllBalances gets the balances for each InstitutionConfig from the corresponding [institution.Institution]
 // and returns all balances in a map where keys are the YNAB account name and values are in cents.
-func GetAllBalances(ctx context.Context, config []InstitutionConfig, decryptor decrypt.Decryptor) (map[string]int64, error) {
+func GetAllBalances(ctx context.Context, config []InstitutionConfig, decryptor crypto.OpenSslDecryptor) (map[string]int64, error) {
 	balances := make(map[string]int64)
 	errs := &institution.MultiError{}
 	for _, ic := range config {

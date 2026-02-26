@@ -8,7 +8,7 @@ import (
 
 	"gopkg.in/gomail.v2"
 
-	"nw-updater/decrypt"
+	"nw-updater/crypto"
 	"nw-updater/institution"
 )
 
@@ -21,7 +21,7 @@ type EmailConfig struct {
 }
 
 //goland:noinspection GoUnhandledErrorResult
-func Email(ec EmailConfig, d decrypt.Decryptor, e error) error {
+func Email(ec EmailConfig, d crypto.OpenSslDecryptor, e error) error {
 	fmt.Printf("Error, sending email: %s\n", e)
 	m := gomail.NewMessage()
 	m.SetHeader("From", fmt.Sprintf("nw-updater <%s>", ec.From))
@@ -31,8 +31,7 @@ func Email(ec EmailConfig, d decrypt.Decryptor, e error) error {
 	body.WriteString("<p><b>nw-updater had errors:</b></p><p/>\n")
 	for i, theError := range UnwrapError(e) {
 		fmt.Fprintf(body, "<p>%s</b>\n", theError.Error())
-		var e institution.Error
-		if errors.As(theError, &e) {
+		if e, ok := errors.AsType[institution.Error](theError); ok {
 			stackHtml := strings.ReplaceAll(string(e.Stacktrace), "\n", "<br>\n")
 			stackHtml = strings.ReplaceAll(stackHtml, "\t", "&nbsp;&nbsp;&nbsp;&nbsp;")
 			fmt.Fprintf(body, "<p>%s</p>\n", stackHtml)

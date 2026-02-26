@@ -17,7 +17,7 @@ import (
 	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
 
-	"nw-updater/decrypt"
+	"nw-updater/crypto"
 )
 
 // Auth contains authentication information for an institution.
@@ -25,12 +25,6 @@ type Auth struct {
 	Username          string
 	EncryptedPassword string `yaml:"encrypted_password"`
 	Questions         map[string]string
-}
-
-// AccountMapping contains the account name in the institution and the mapping to the YNAB account name.
-type AccountMapping struct {
-	Name    string
-	Mapping string
 }
 
 type LoginResult uint8
@@ -43,11 +37,11 @@ const (
 
 // An Institution gets the balances for the given slice of [AccountMapping].
 type Institution interface {
-	GetBalances(context.Context, Auth, decrypt.Decryptor, []AccountMapping) (map[string]int64, error)
+	GetBalances(context.Context, Auth, crypto.OpenSslDecryptor, map[string]string) (map[string]int64, error)
 }
 
 type SecurityCode interface {
-	RequestCode(ctx context.Context, auth Auth, d decrypt.Decryptor) (context.Context, context.CancelFunc, error)
+	RequestCode(ctx context.Context, auth Auth, d crypto.OpenSslDecryptor) (context.Context, context.CancelFunc, error)
 	EnterCode(ctx context.Context, code string) error
 	Institution
 }
@@ -148,7 +142,7 @@ func screenshotError(ctx context.Context, err error) error {
 // getMultipleBalances is a utility function used by an Institution to retrieve multiple balances from
 // a single page. The Institution provides the nodes containing the account name and balance,
 // and selectors for the name and balance inside each node.
-func getMultipleBalances(nodes []*cdp.Node, parentCtx context.Context, mapping []AccountMapping, nameSelector,
+func getMultipleBalances(nodes []*cdp.Node, parentCtx context.Context, mappings map[string]string, nameSelector,
 	balSelector string) (map[string]int64, error) {
 
 	ctx, cancel := context.WithTimeout(parentCtx, 1*time.Minute)
@@ -167,17 +161,15 @@ func getMultipleBalances(nodes []*cdp.Node, parentCtx context.Context, mapping [
 			continue
 		}
 		trimmedName := strings.TrimSpace(name)
-		mappingIndex := slices.IndexFunc(mapping, func(mapping AccountMapping) bool {
-			return mapping.Name == trimmedName
-		})
-		if mappingIndex != -1 {
+		mapping, ok := mappings[trimmedName]
+		if ok {
 			balanceNum, err := parseCents(balance)
 			if err != nil {
 				err = fmt.Errorf("failed to parse balance '%s': %w", balance, err)
 				errs.AddError(screenshotError(parentCtx, err))
 				continue
 			}
-			balances[mapping[mappingIndex].Mapping] = balanceNum
+			balances[mapping] = balanceNum
 		}
 	}
 	if errs.IsEmpty() {

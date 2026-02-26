@@ -8,7 +8,7 @@ import (
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
 
-	"nw-updater/decrypt"
+	"nw-updater/crypto"
 )
 
 const (
@@ -19,7 +19,7 @@ const (
 type fidelity struct {
 }
 
-func (f fidelity) RequestCode(ctx context.Context, auth Auth, d decrypt.Decryptor) (context.Context, context.CancelFunc, error) {
+func (f fidelity) RequestCode(ctx context.Context, auth Auth, d crypto.OpenSslDecryptor) (context.Context, context.CancelFunc, error) {
 	// begin login process
 	doCancel := true
 	ctx, cancel := newContext(ctx, fidelityUrlPrefix)
@@ -60,7 +60,7 @@ func init() {
 	registerInstitution("fidelity", fidelity{})
 }
 
-func (f fidelity) GetBalances(parentCtx context.Context, auth Auth, d decrypt.Decryptor, mapping []AccountMapping) (map[string]int64, error) {
+func (f fidelity) GetBalances(parentCtx context.Context, auth Auth, d crypto.OpenSslDecryptor, mappings map[string]string) (map[string]int64, error) {
 	browserCtx, cancel := newContext(parentCtx, fidelityUrlPrefix)
 	defer cancel()
 	result, screenshot := f.startAuth(browserCtx, auth.Username, d.Decrypt(auth.EncryptedPassword))
@@ -74,7 +74,7 @@ func (f fidelity) GetBalances(parentCtx context.Context, auth Auth, d decrypt.De
 	if err != nil {
 		return nil, screenshotError(browserCtx, err)
 	}
-	return getMultipleBalances(nodes, browserCtx, mapping,
+	return getMultipleBalances(nodes, browserCtx, mappings,
 		".acct-selector__acct-name span:not(.sr-only)", ".acct-selector__acct-balance span:not(.sr-only)")
 }
 
