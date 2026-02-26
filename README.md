@@ -8,7 +8,6 @@ Actual Budget is updated using [actual-http-api](https://github.com/jhonderson/a
 ## Currently supported institutions:
 - [Fidelity](https://www.fidelity.com)
 - [Fideltiy NetBenefits](https://nb.fidelity.com)
-- [Schwab Retirement Plan Center](https://workplace.schwab.com)
 - [Igoe Administrative Services](https://www.goigoe.com)
 
 ## Configuring
