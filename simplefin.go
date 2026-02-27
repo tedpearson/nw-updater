@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -75,7 +76,7 @@ func (sf SimpleFin) GetAllAccounts() ([]SFAccount, error) {
 	}
 	resp, err := http.Get(accountsUrl)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting accounts: %w", err)
 	}
 	defer resp.Body.Close()
 	accountSet := new(SFAccountSet)
@@ -83,17 +84,17 @@ func (sf SimpleFin) GetAllAccounts() ([]SFAccount, error) {
 	decoder := json.NewDecoder(reader)
 	err = decoder.Decode(accountSet)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error decoding accounts: %w", err)
 	}
 	accounts := make([]SFAccount, len(accountSet.Accounts))
 	for i, account := range accountSet.Accounts {
 		balance, err := parseCurrency(account.Balance)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error parsing balance: %w", err)
 		}
 		availableBalance, err := parseCurrency(account.AvailableBalance)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error parsing available balance: %w", err)
 		}
 		balanceDate := time.Unix(account.BalanceDate, 0)
 		accounts[i] = SFAccount{
@@ -111,16 +112,16 @@ func (sf SimpleFin) GetAllAccounts() ([]SFAccount, error) {
 func (sf SimpleFin) Authenticate(token string) error {
 	claimUrl, err := base64.StdEncoding.DecodeString(token)
 	if err != nil {
-		return err
+		return fmt.Errorf("error decoding token: %w", err)
 	}
 	resp, err := http.Post(string(claimUrl), "", nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("error claiming access url: %w", err)
 	}
 	defer resp.Body.Close()
 	accessUrl, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return fmt.Errorf("error reading access url: %w", err)
 	}
 	return sf.storeAccessUrl(accessUrl, sf.Passphrase)
 }
@@ -129,12 +130,16 @@ func (sf SimpleFin) Authenticate(token string) error {
 func (sf SimpleFin) storeAccessUrl(url []byte, passphrase string) error {
 	encrypted, err := crypto.EncryptAES256GCM(url, passphrase)
 	if err != nil {
-		return err
+		return fmt.Errorf("error encrypting access url: %w", err)
 	}
 	encodedLen := base64.StdEncoding.EncodedLen(len(encrypted))
 	encoded := make([]byte, encodedLen)
 	base64.StdEncoding.Encode(encoded, encrypted)
-	return os.WriteFile(filepath.Join(sf.TokenDir, AccessUrlFilename), encoded, 0600)
+	err = os.WriteFile(filepath.Join(sf.TokenDir, AccessUrlFilename), encoded, 0600)
+	if err != nil {
+		return fmt.Errorf("error writing access url: %w", err)
+	}
+	return nil
 }
 
 // IsAuthenticated returns true if the SimpleFin access url file exists in the token directory.
@@ -147,13 +152,13 @@ func (sf SimpleFin) IsAuthenticated() bool {
 func (sf SimpleFin) GetAccessUrl() (string, error) {
 	encoded, err := os.ReadFile(filepath.Join(sf.TokenDir, AccessUrlFilename))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error reading access url: %w", err)
 	}
 	decodedLen := base64.StdEncoding.DecodedLen(len(encoded))
 	encrypted := make([]byte, decodedLen)
 	_, err = base64.StdEncoding.Decode(encrypted, encoded)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error decoding access url: %w", err)
 	}
 	return crypto.DecryptAES256GCM(encrypted, sf.Passphrase)
 }

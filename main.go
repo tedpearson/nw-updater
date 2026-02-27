@@ -172,12 +172,12 @@ func ReadMappingFile(mappingFile string) (map[string]string, error) {
 	}
 	f, err := os.Open(mappingFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error opening mapping file: %w", err)
 	}
 	defer f.Close()
 	var mappings map[string]string
 	err = yaml.NewDecoder(f).Decode(&mappings)
-	return mappings, err
+	return mappings, fmt.Errorf("error decoding mapping file: %w", err)
 }
 
 // SimpleFinAuthMain authenticates with SimpleFin and saves the access URL to a file.

@@ -83,12 +83,12 @@ func (a ActualBudget) updateBalance(account ABAccount, balance SFAccount) error 
 	}
 	req, err := http.NewRequest("GET", balanceUrl, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating balance request: %w", err)
 	}
 	req.Header.Set("x-api-key", a.ApiKey)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting balance for account '%s': %w", account.Name, err)
 	}
 	defer resp.Body.Close()
 	balanceJson := new(ABBalance)
@@ -96,7 +96,7 @@ func (a ActualBudget) updateBalance(account ABAccount, balance SFAccount) error 
 	decoder := json.NewDecoder(reader)
 	err = decoder.Decode(balanceJson)
 	if err != nil {
-		return err
+		return fmt.Errorf("error decoding balance response: %w", err)
 	}
 	newBalance := balance.Balance
 	if balanceJson.Data == newBalance {
@@ -124,7 +124,7 @@ func (a ActualBudget) updateBalance(account ABAccount, balance SFAccount) error 
 	buffer := new(bytes.Buffer)
 	err = json.NewEncoder(buffer).Encode(transaction)
 	if err != nil {
-		return err
+		return fmt.Errorf("error encoding transaction: %w", err)
 	}
 	transactionUrl, err := url.JoinPath(a.ApiUrl, "budgets", a.SyncId, "accounts", account.Id, "transactions")
 	if err != nil {
@@ -133,13 +133,13 @@ func (a ActualBudget) updateBalance(account ABAccount, balance SFAccount) error 
 
 	req, err = http.NewRequest("POST", transactionUrl, buffer)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating transaction request: %w", err)
 	}
 	req.Header.Set("x-api-key", a.ApiKey)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating transaction: %w", err)
 	}
 	defer resp.Body.Close()
 	sign := "+"
@@ -160,18 +160,18 @@ func (a ActualBudget) GetAccounts() ([]ABAccount, error) {
 	}
 	req, err := http.NewRequest("GET", accountsUrl, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error making account request: %w", err)
 	}
 	req.Header.Set("x-api-key", a.ApiKey)
 	req.Header.Set("Accept", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting accounts: %w", err)
 	}
 	defer resp.Body.Close()
 	accounts := new(ABAccounts)
 	reader := resp.Body.(io.Reader)
 	decoder := json.NewDecoder(reader)
 	err = decoder.Decode(accounts)
-	return accounts.Data, err
+	return accounts.Data, fmt.Errorf("error decoding accounts: %w", err)
 }

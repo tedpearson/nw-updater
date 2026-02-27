@@ -66,12 +66,12 @@ func Setup(sf SimpleFin, a ActualBudget, mappingFile string) error {
 	}
 	f, err := os.Create(mappingFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating mapping file: %w", err)
 	}
 	defer f.Close()
 	err = yaml.NewEncoder(f).Encode(accountMapping)
 	if err != nil {
-		return err
+		return fmt.Errorf("error writing mapping file: %w", err)
 	}
 	fmt.Printf("\n\n")
 	err = yaml.NewEncoder(os.Stdout).Encode(accountMapping)
