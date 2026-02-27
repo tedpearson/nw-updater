@@ -74,7 +74,7 @@ type Config struct {
 	InstitutionConfig []InstitutionConfig `yaml:"institutions"`
 	SimpleFin         *SimpleFin          `yaml:"simplefin"`
 	YnabConfig        *YnabConfig         `yaml:"ynab"`
-	ActualBudget      *ActualBudget       `yaml:"actual"`
+	ActualConfig      *ActualBudgetConfig `yaml:"actual"`
 	EmailConfig       EmailConfig         `yaml:"email"`
 }
 
@@ -117,7 +117,7 @@ func main() {
 		case "simplefin-auth":
 			err = SimpleFinAuthMain(args[1:], *config.SimpleFin)
 		case "setup":
-			err = SimpleFinSetupMain(config)
+			err = SimpleFinSetupMain(config, decryptor)
 		default:
 			panic("unsupported command: " + args[0])
 		}
@@ -159,7 +159,7 @@ func StandardMain(config Config, ctx context.Context, decryptor crypto.OpenSslDe
 		if err != nil {
 			return err
 		}
-		actualBudget := *config.ActualBudget
+		actualBudget := NewActualBudget(*config.ActualConfig, decryptor)
 		return actualBudget.UpdateBalances(balances)
 	}
 }
@@ -189,9 +189,9 @@ func SimpleFinAuthMain(args []string, sf SimpleFin) error {
 }
 
 // SimpleFinSetupMain runs the interactive setup process for SimpleFin.
-func SimpleFinSetupMain(config Config) error {
+func SimpleFinSetupMain(config Config, decryptor crypto.OpenSslDecryptor) error {
 	sf := *config.SimpleFin
-	ab := *config.ActualBudget
+	ab := NewActualBudget(*config.ActualConfig, decryptor)
 	return Setup(sf, ab, config.MappingFile)
 }
 

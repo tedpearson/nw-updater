@@ -8,15 +8,21 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"nw-updater/crypto"
 	"time"
 )
 
+// ActualBudgetConfig holds the configuration for the Actual Budget API.
+type ActualBudgetConfig struct {
+	EncryptedApiKey string `yaml:"encrypted_api_key"`
+	ApiUrl          string `yaml:"api_url"`
+	SyncId          string `yaml:"sync_id"`
+}
+
 // ActualBudget is used to interact with the Actual Budget Http api.
-// It contains the configuration for connecting to the Actual HTTP API.
 type ActualBudget struct {
-	ApiKey string `yaml:"api_key"`
-	ApiUrl string `yaml:"api_url"`
-	SyncId string `yaml:"sync_id"`
+	ApiKey string
+	ActualBudgetConfig
 }
 
 // ABAccounts holds the JSON response from the Actual Budget accounts endpoint
@@ -53,6 +59,13 @@ type ABTransaction struct {
 	Date      string `json:"date"`
 	Cleared   bool   `json:"cleared"`
 	Notes     string `json:"notes"`
+}
+
+func NewActualBudget(config ActualBudgetConfig, decryptor crypto.OpenSslDecryptor) ActualBudget {
+	return ActualBudget{
+		ApiKey:             decryptor.Decrypt(config.EncryptedApiKey),
+		ActualBudgetConfig: config,
+	}
 }
 
 // UpdateBalances takes a map of Actual account ids to SimpleFin account structs and creates
