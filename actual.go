@@ -104,7 +104,7 @@ func (a ActualBudget) updateBalance(account ABAccount, balance SFAccount) error 
 	}
 	newBalance := balance.Balance
 	if balanceJson.Data == newBalance {
-		fmt.Printf("Account balance has not change for '%s': ($%s%.2f)\n", account.Name, newBalance/100.0)
+		fmt.Printf("Account balance has not changed for '%s': ($%.2f)\n", account.Name, float64(newBalance)/100.0)
 		return nil
 	}
 	// balances differ
