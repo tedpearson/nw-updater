@@ -11,29 +11,20 @@ import (
 	"time"
 )
 
-type ActualConfig struct {
+// ActualBudget is used to interact with the Actual Budget Http api.
+// It contains the configuration for connecting to the Actual HTTP API.
+type ActualBudget struct {
 	ApiKey string `yaml:"api_key"`
 	ApiUrl string `yaml:"api_url"`
 	SyncId string `yaml:"sync_id"`
 }
 
-type ActualBudget struct {
-	ActualConfig
-}
-
-type ABCategoriesResponse struct {
-	Data []ABCategory `json:"data"`
-}
-
-type ABCategory struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
-}
-
+// ABAccounts holds the JSON response from the Actual Budget accounts endpoint
 type ABAccounts struct {
 	Data []ABAccount `json:"data"`
 }
 
+// ABAccount is the JSON representation of an Actual Budget account
 type ABAccount struct {
 	Id        string `json:"id"`
 	Name      string `json:"name"`
@@ -41,16 +32,19 @@ type ABAccount struct {
 	Closed    bool   `json:"closed"`
 }
 
+// ABBalance holds the JSON response from the Actual Budget account balance endpoint
 type ABBalance struct {
 	Data int64 `json:"data"`
 }
 
+// ABTransactionRequest is the JSON request body for creating a transaction in Actual Budget
 type ABTransactionRequest struct {
 	LearnCategories bool          `json:"learnCategories"`
 	RunTransfers    bool          `json:"runTransfers"`
 	Transaction     ABTransaction `json:"transaction"`
 }
 
+// ABTransaction is the JSON representation of a transaction in Actual Budget
 type ABTransaction struct {
 	Account   string `json:"account"`
 	Category  string `json:"category"`
@@ -61,7 +55,7 @@ type ABTransaction struct {
 	Notes     string `json:"notes"`
 }
 
-// UpdateBalances takes a map of Actual account names to balances in cents as well as a config, and creates
+// UpdateBalances takes a map of Actual account ids to SimpleFin account structs and creates
 // adjustment transactions in those accounts to make the account balances match.
 func (a ActualBudget) UpdateBalances(balances map[string]SFAccount) error {
 	accounts, err := a.GetAccounts()
@@ -80,6 +74,8 @@ func (a ActualBudget) UpdateBalances(balances map[string]SFAccount) error {
 	return nil
 }
 
+// updateBalance updates the balance of an Actual account to match the provided SimpleFin account balance
+// as of the balance date.
 func (a ActualBudget) updateBalance(account ABAccount, balance SFAccount) error {
 	balanceUrl, err := url.JoinPath(a.ApiUrl, "budgets", a.SyncId, "accounts", account.Id, "balance")
 	if err != nil {
@@ -155,6 +151,7 @@ func (a ActualBudget) updateBalance(account ABAccount, balance SFAccount) error 
 	return nil
 }
 
+// GetAccounts returns a list of all accounts in the budget.
 func (a ActualBudget) GetAccounts() ([]ABAccount, error) {
 	// get accounts
 	accountsUrl, err := url.JoinPath(a.ApiUrl, "budgets", a.SyncId, "accounts")

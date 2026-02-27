@@ -11,6 +11,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Setup configures the mapping between SimpleFin accounts and Actual Budget accounts, and writes
+// that mapping to a file as well as to stdout.
 func Setup(sf SimpleFin, a ActualBudget, mappingFile string) error {
 	if !sf.IsAuthenticated() {
 		return fmt.Errorf("error getting access url, try `nw-updater simplefin-auth`")
@@ -80,6 +82,8 @@ func Setup(sf SimpleFin, a ActualBudget, mappingFile string) error {
 	return nil
 }
 
+// MultiSelect displays a multi-select prompt with a given message,
+// options, and preselected indices, and returns selected indices.
 func MultiSelect(message string, options []string, selected []int) []int {
 	selectOptions := make([]tap.SelectOption[int], len(options))
 	for i, option := range options {
@@ -92,6 +96,8 @@ func MultiSelect(message string, options []string, selected []int) []int {
 	})
 }
 
+// SingleSelect displays a single-select prompt with a given message,
+// options, and preselected index, and returns the selected index.
 func SingleSelect(message string, options []string, selected *int) int {
 	selectOptions := make([]tap.SelectOption[int], len(options))
 	for i, option := range options {

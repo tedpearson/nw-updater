@@ -14,19 +14,19 @@ import (
 	"time"
 )
 
-type SimpleFinConfig struct {
+// SimpleFin interacts with the SimpleFin API to retrieve accounts and balances.
+// It stores the SimpleFin access url in an encrypted file in the token directory.
+type SimpleFin struct {
 	Passphrase string `yaml:"passphrase"`
 	TokenDir   string `yaml:"token_dir"`
 }
 
-type SimpleFin struct {
-	SimpleFinConfig
-}
-
+// SFAccountSet is the JSON response from the SimpleFin accounts endpoint
 type SFAccountSet struct {
 	Accounts []SFAccountJson `json:"accounts"`
 }
 
+// SFAccountJson is the JSON representation of an account in SimpleFin
 type SFAccountJson struct {
 	Name             string `json:"name"`
 	Balance          string `json:"balance"`
@@ -35,6 +35,7 @@ type SFAccountJson struct {
 	Id               string `json:"id"`
 }
 
+// SFAccount is a SimpleFin account with idiomatic go types
 type SFAccount struct {
 	Name             string
 	Balance          int64
@@ -46,6 +47,8 @@ type SFAccount struct {
 const AccessUrlFilename = "access_url.txt"
 const AccountsEndpoint = "accounts"
 
+// GetBalances takes a map of SimpleFin account ids to Actual Budget account ids
+// and returns a map of Actual Budget account ids to SimpleFin accounts with balances and balance dates.
 func (sf SimpleFin) GetBalances(mappings map[string]string) (map[string]SFAccount, error) {
 	accounts, err := sf.GetAllAccounts()
 	if err != nil {
@@ -60,6 +63,7 @@ func (sf SimpleFin) GetBalances(mappings map[string]string) (map[string]SFAccoun
 	return balances, nil
 }
 
+// GetAllAccounts returns all SimpleFin accounts and their balances.
 func (sf SimpleFin) GetAllAccounts() ([]SFAccount, error) {
 	accessUrl, err := sf.GetAccessUrl()
 	if err != nil {
@@ -103,6 +107,7 @@ func (sf SimpleFin) GetAllAccounts() ([]SFAccount, error) {
 	return accounts, nil
 }
 
+// Authenticate takes a SimpleFin token, uses it to get the access url, and stores it in the token directory.
 func (sf SimpleFin) Authenticate(token string) error {
 	claimUrl, err := base64.StdEncoding.DecodeString(token)
 	if err != nil {
@@ -120,6 +125,7 @@ func (sf SimpleFin) Authenticate(token string) error {
 	return sf.storeAccessUrl(accessUrl, sf.Passphrase)
 }
 
+// storeAccessUrl encrypts and stores the access url in the token directory.
 func (sf SimpleFin) storeAccessUrl(url []byte, passphrase string) error {
 	encrypted, err := crypto.EncryptAES256GCM(url, passphrase)
 	if err != nil {
@@ -131,11 +137,13 @@ func (sf SimpleFin) storeAccessUrl(url []byte, passphrase string) error {
 	return os.WriteFile(filepath.Join(sf.TokenDir, AccessUrlFilename), encoded, 0600)
 }
 
+// IsAuthenticated returns true if the SimpleFin access url file exists in the token directory.
 func (sf SimpleFin) IsAuthenticated() bool {
 	_, err := os.Stat(filepath.Join(sf.TokenDir, AccessUrlFilename))
 	return err == nil
 }
 
+// GetAccessUrl returns the SimpleFin access url from the encrypted file.
 func (sf SimpleFin) GetAccessUrl() (string, error) {
 	encoded, err := os.ReadFile(filepath.Join(sf.TokenDir, AccessUrlFilename))
 	if err != nil {
@@ -150,6 +158,8 @@ func (sf SimpleFin) GetAccessUrl() (string, error) {
 	return crypto.DecryptAES256GCM(encrypted, sf.Passphrase)
 }
 
+// parseCurrency removes the decimal point from a string representing a currency amount
+// and converts it to an int64 representing the amount in cents.
 func parseCurrency(s string) (int64, error) {
 	noDots := strings.ReplaceAll(s, ".", "")
 	return strconv.ParseInt(noDots, 10, 64)

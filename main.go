@@ -1,33 +1,53 @@
 /*
-nw-updater updates account balances in [ynab], getting current account balances from various institutions.
-Current account balances are retrieved using Chrome DevTools Protocol via [chromedp].
-YNAB is updated using the YNAB API via [ynab.go].
+nw-updater syncs investment account balances into [YNAB] or [Actual Budget].
+
+Two sync paths are supported:
+
+ 1. Institution login sync: fetch balances from supported institutions using [chromedp], then update YNAB.
+ 2. SimpleFin sync: fetch balances from [SimpleFin], map them to Actual Budget accounts, then create adjustment
+    transactions through the Actual HTTP API.
 
 Usage:
 
-nw-updater [flags]
+	nw-updater [flags] [command]
 
-The flags are:
+Flags:
 
 	--config config_file
-
-		The config file to parse accounts and authentication information from. Defaults to config.yaml
+		Config file containing institutions, mappings, and destination settings. Defaults to config.yaml.
 
 	--passphrase-file file
-
-		The file containing the passphrase to use to decrypt passwords in the config file.
+		File containing passphrase used to decrypt encrypted values in the config file.
 
 	--headless
-
-		If specified, Chrome instance will be created without a window.
+		Run Chrome in headless mode (Linux support via chromedp-undetected).
 
 	--websocket url
+		Use an existing Chrome DevTools instance.
 
-		Optional websocket url to an existing Chrome DevTools instance.
+Commands:
 
-[ynab]: https://www.ynab.com/
+	security-code
+		Complete MFA code entry for institution logins that require it.
+		Args:
+			--institution name  Institution key from config (required)
+			--username value    Username from config
+							    (optional, needed if there are multiple accounts at this institution)
+
+	simplefin-auth
+		Authenticat with SimpleFin and save the generated access URL.
+		Args:
+			--token value  SimpleFin setup token (required)
+
+	setup
+		Interactively map SimpleFin accounts to Actual Budget accounts and write mapping.yaml.
+		Args:
+			none
+
+[YNAB]: https://www.ynab.com/
+[Actual Budget]: https://actualbudget.org/
+[SimpleFin]: https://beta-bridge.simplefin.org/
 [chromedp]: https://github.com/chromedp/chromedp
-[ynab.go]: https://github.com/brunomvsouza/ynab.go
 */
 package main
 
@@ -52,9 +72,9 @@ import (
 type Config struct {
 	MappingFile       string              `yaml:"mapping_file"`
 	InstitutionConfig []InstitutionConfig `yaml:"institutions"`
-	SimpleFinConfig   *SimpleFinConfig    `yaml:"simplefin"`
+	SimpleFin         *SimpleFin          `yaml:"simplefin"`
 	YnabConfig        *YnabConfig         `yaml:"ynab"`
-	ActualConfig      *ActualConfig       `yaml:"actual"`
+	ActualBudget      *ActualBudget       `yaml:"actual"`
 	EmailConfig       EmailConfig         `yaml:"email"`
 }
 
@@ -95,7 +115,7 @@ func main() {
 		case "security-code":
 			err = SecurityCodeMain(args[1:], ctx, config.InstitutionConfig, decryptor)
 		case "simplefin-auth":
-			err = SimpleFinAuthMain(args[1:], *config.SimpleFinConfig)
+			err = SimpleFinAuthMain(args[1:], *config.SimpleFin)
 		case "setup":
 			err = SimpleFinSetupMain(config)
 		default:
@@ -113,8 +133,10 @@ func main() {
 
 }
 
+// StandardMain is the main function responsible for updating balances, fetching from either YNAB or Actual Budget,
+// and updating either YNAB or Actual Budget.
 func StandardMain(config Config, ctx context.Context, decryptor crypto.OpenSslDecryptor) error {
-	if config.SimpleFinConfig == nil {
+	if config.SimpleFin == nil {
 		balances, err := GetAllBalances(ctx, config.InstitutionConfig, decryptor)
 		if err != nil {
 			err = Email(config.EmailConfig, decryptor, err)
@@ -128,8 +150,7 @@ func StandardMain(config Config, ctx context.Context, decryptor crypto.OpenSslDe
 		}
 		return nil
 	} else {
-		simpleFin := new(SimpleFin)
-		simpleFin.SimpleFinConfig = *config.SimpleFinConfig
+		simpleFin := *config.SimpleFin
 		mappings, err := ReadMappingFile(config.MappingFile)
 		if err != nil {
 			return err
@@ -138,12 +159,13 @@ func StandardMain(config Config, ctx context.Context, decryptor crypto.OpenSslDe
 		if err != nil {
 			return err
 		}
-		actual := new(ActualBudget)
-		actual.ActualConfig = *config.ActualConfig
-		return actual.UpdateBalances(balances)
+		actualBudget := *config.ActualBudget
+		return actualBudget.UpdateBalances(balances)
 	}
 }
 
+// ReadMappingFile reads a YAML file containing SimpleFin account ids to Actual Budget id mappings
+// and returns the mappings as a map. If the file does not exist, it returns an empty map without an error.
 func ReadMappingFile(mappingFile string) (map[string]string, error) {
 	if _, err := os.Stat(mappingFile); os.IsNotExist(err) {
 		return make(map[string]string), nil
@@ -158,23 +180,24 @@ func ReadMappingFile(mappingFile string) (map[string]string, error) {
 	return mappings, err
 }
 
-func SimpleFinAuthMain(args []string, config SimpleFinConfig) error {
+// SimpleFinAuthMain authenticates with SimpleFin and saves the access URL to a file.
+func SimpleFinAuthMain(args []string, sf SimpleFin) error {
 	fs := flag.NewFlagSet("nw-updater simplefin-auth", flag.ExitOnError)
 	token := fs.String("token", "", "The token to authenticate with")
 	_ = fs.Parse(args)
-	sf := new(SimpleFin)
-	sf.SimpleFinConfig = config
 	return sf.Authenticate(*token)
 }
 
+// SimpleFinSetupMain runs the interactive setup process for SimpleFin.
 func SimpleFinSetupMain(config Config) error {
-	sf := new(SimpleFin)
-	sf.SimpleFinConfig = *config.SimpleFinConfig
-	ab := new(ActualBudget)
-	ab.ActualConfig = *config.ActualConfig
-	return Setup(*sf, *ab, config.MappingFile)
+	sf := *config.SimpleFin
+	ab := *config.ActualBudget
+	return Setup(sf, ab, config.MappingFile)
 }
 
+// SecurityCodeMain handles the security code entry flow for institutions that require it.
+// It finds the correct institution and account based on the provided args,
+// then prompts the user to enter the code after requesting it from the institution.
 func SecurityCodeMain(args []string, ctx context.Context, configs []InstitutionConfig, decryptor crypto.OpenSslDecryptor) error {
 	// Parse additonal args
 	fs := flag.NewFlagSet("nw-updater security-code", flag.ExitOnError)

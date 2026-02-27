@@ -57,6 +57,7 @@ func DecryptAES256GCM(encrypted []byte, keyString string) (string, error) {
 	return string(plaintext), nil
 }
 
+// keyFromString generates a 32-byte key from a string using SHA-256.
 func keyFromString(keyString string) []byte {
 	sum := sha256.Sum256([]byte(keyString))
 	return sum[:]
