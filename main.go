@@ -58,6 +58,7 @@ import (
 	"maps"
 	. "nw-updater/common"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/chromedp/chromedp"
@@ -71,7 +72,7 @@ import (
 
 // Config contains the fields read from the config.yaml file.
 type Config struct {
-	MappingFile       string              `yaml:"mapping_file"`
+	AccountMappings   map[string]string   `yaml:"account_mappings"`
 	InstitutionConfig []InstitutionConfig `yaml:"institutions"`
 	SimpleFin         *SimpleFin          `yaml:"simplefin"`
 	YnabConfig        *YnabConfig         `yaml:"ynab"`
@@ -81,9 +82,8 @@ type Config struct {
 
 // InstitutionConfig contains the configs for an account at an institution along with the mapping to a YNAB account.
 type InstitutionConfig struct {
-	Name            string            // The name of the institution, for finding the correct instance to get balances
-	Auth            institution.Auth  // The credentials to log in to the institution
-	AccountMappings map[string]string `yaml:"accounts"` // The mapping from name in the institution to name in YNAB
+	Name string           // The name of the institution, for finding the correct instance to get balances
+	Auth institution.Auth // The credentials to log in to the institution
 }
 
 func main() {
@@ -118,7 +118,7 @@ func main() {
 		case "simplefin-auth":
 			err = SimpleFinAuthMain(args[1:], *config.SimpleFin)
 		case "setup":
-			err = SimpleFinSetupMain(config, decryptor)
+			err = SimpleFinSetupMain(config, *configFlag, decryptor)
 		default:
 			panic("unsupported command: " + args[0])
 		}
@@ -137,14 +137,10 @@ func main() {
 // StandardMain is the main function responsible for updating balances, fetching from either YNAB or Actual Budget,
 // and updating either YNAB or Actual Budget.
 func StandardMain(config Config, ctx context.Context, decryptor crypto.OpenSslDecryptor) error {
-	mappings, err := ReadMappingFile(config.MappingFile)
-	if err != nil {
-		return err
-	}
 	balances := make(map[string]AccountBalance)
 	if len(config.InstitutionConfig) > 0 {
 		var err error
-		balances, err = GetAllBalances(ctx, config.InstitutionConfig, mappings, decryptor)
+		balances, err = GetAllBalances(ctx, config.InstitutionConfig, config.AccountMappings, decryptor)
 		if err != nil {
 			err = Email(config.EmailConfig, decryptor, err)
 			if err != nil {
@@ -154,7 +150,7 @@ func StandardMain(config Config, ctx context.Context, decryptor crypto.OpenSslDe
 	}
 	if config.SimpleFin != nil {
 		simpleFin := *config.SimpleFin
-		simpleFinBalances, err := simpleFin.GetBalances(mappings)
+		simpleFinBalances, err := simpleFin.GetBalances(config.AccountMappings)
 		if err != nil {
 			return err
 		}
@@ -165,32 +161,13 @@ func StandardMain(config Config, ctx context.Context, decryptor crypto.OpenSslDe
 		return actualBudget.UpdateBalances(balances)
 	}
 	if config.YnabConfig != nil {
-		err = YnabUpdateBalances(balances, *config.YnabConfig, decryptor)
+		err := YnabUpdateBalances(balances, *config.YnabConfig, decryptor)
 		if err != nil {
 			return fmt.Errorf("error updating ynab balances: %w", err)
 		}
 		return nil
 	}
 	return fmt.Errorf("error, invalid config file")
-}
-
-// ReadMappingFile reads a YAML file containing SimpleFin account ids to Actual Budget id mappings
-// and returns the mappings as a map. If the file does not exist, it returns an empty map without an error.
-func ReadMappingFile(mappingFile string) (map[string]string, error) {
-	if _, err := os.Stat(mappingFile); os.IsNotExist(err) {
-		return make(map[string]string), nil
-	}
-	f, err := os.Open(mappingFile)
-	if err != nil {
-		return nil, fmt.Errorf("error opening mapping file: %w", err)
-	}
-	defer f.Close()
-	var mappings map[string]string
-	err = yaml.NewDecoder(f).Decode(&mappings)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing mapping file: %w", err)
-	}
-	return mappings, nil
 }
 
 // SimpleFinAuthMain authenticates with SimpleFin and saves the access URL to a file.
@@ -202,10 +179,10 @@ func SimpleFinAuthMain(args []string, sf SimpleFin) error {
 }
 
 // SimpleFinSetupMain runs the interactive setup process for SimpleFin.
-func SimpleFinSetupMain(config Config, decryptor crypto.OpenSslDecryptor) error {
+func SimpleFinSetupMain(config Config, configFile string, decryptor crypto.OpenSslDecryptor) error {
 	sf := *config.SimpleFin
 	ab := NewActualBudget(*config.ActualConfig, decryptor)
-	return Setup(sf, ab, config.MappingFile)
+	return Setup(sf, ab, config, configFile)
 }
 
 // SecurityCodeMain handles the security code entry flow for institutions that require it.
@@ -255,7 +232,8 @@ func GetAllBalances(ctx context.Context, config []InstitutionConfig, mappings ma
 	errs := &institution.MultiError{}
 	for _, ic := range config {
 		fmt.Printf("Getting balances at %s for %s\n", ic.Name, ic.Auth.Username)
-		bs, err := institution.MustGet(ic.Name).GetBalances(ctx, ic.Auth, decryptor, mappings)
+		inst := institution.MustGet(ic.Name)
+		bs, err := inst.GetBalances(ctx, ic.Auth, decryptor, FilterMappings(mappings, ic.Name, ic.Auth.Username))
 		fmt.Printf("Found %d matching balances\n", len(bs))
 		if err != nil {
 			newErr := fmt.Errorf("failed to get balances from %s: %w", ic.Name, err)
@@ -293,4 +271,14 @@ func GetContext(headless bool, websocket string) (context.Context, context.Cance
 		panic(err)
 	}
 	return ctx, cancel
+}
+
+func FilterMappings(mappings map[string]string, institution, username string) map[string]string {
+	prefix := institution + ":" + username + ":"
+	for k, v := range mappings {
+		if strings.Index(k, prefix) == 0 {
+			mappings[k[len(prefix):]] = v
+		}
+	}
+	return mappings
 }

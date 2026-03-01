@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -12,15 +14,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const SFMappingPattern = "ACT-[\\da-f]{8}-[\\da-f]{4}-[\\da-f]{4}-[\\da-f]{4}-[\\da-f]{12}"
+
 // Setup configures the mapping between SimpleFin accounts and Actual Budget accounts, and writes
 // that mapping to a file as well as to stdout.
-func Setup(sf SimpleFin, a ActualBudget, mappingFile string) error {
+func Setup(sf SimpleFin, a ActualBudget, config Config, configFile string) error {
 	if !sf.IsAuthenticated() {
 		return fmt.Errorf("error getting access url, try `nw-updater simplefin-auth`")
-	}
-	mappings, err := ReadMappingFile(mappingFile)
-	if err != nil {
-		return err
 	}
 	sfAccounts, err := sf.GetAllAccounts()
 	if err != nil {
@@ -31,7 +31,7 @@ func Setup(sf SimpleFin, a ActualBudget, mappingFile string) error {
 	for i, sfAccount := range sfAccounts {
 		sfNames[i] = fmt.Sprintf("%s: $%.2f as of %s", sfAccount.Name, float64(sfAccount.Balance)/100.0, sfAccount.BalanceDate.Format(time.RFC850))
 	}
-
+	mappings := config.AccountMappings
 	sfSelected := make([]int, 0, len(mappings))
 	for i, sfAccount := range sfAccounts {
 		if _, ok := mappings[sfAccount.Id]; ok {
@@ -57,7 +57,14 @@ func Setup(sf SimpleFin, a ActualBudget, mappingFile string) error {
 	for _, account := range filteredAccounts {
 		abNames = append(abNames, account.Name)
 	}
-	accountMapping := make(map[string]string)
+	updatedMappings := make(map[string]string)
+	r := regexp.MustCompile(SFMappingPattern)
+	// keep mappings that don't match the SimpleFin pattern
+	for key, value := range mappings {
+		if !r.MatchString(key) {
+			updatedMappings[key] = value
+		}
+	}
 	for i, sfAccountIndex := range sfAccountIndexes {
 		var selected *int
 		if mapping, ok := mappings[sfAccounts[sfAccountIndex].Id]; ok {
@@ -70,23 +77,23 @@ func Setup(sf SimpleFin, a ActualBudget, mappingFile string) error {
 		}
 		message := fmt.Sprintf("[%d/%d] Select account to sync '%s' to", i, len(sfAccountIndexes), sfNames[sfAccountIndex])
 		abAccountIndex := SingleSelect(message, abNames, selected)
-		accountMapping[sfAccounts[sfAccountIndex].Id] = filteredAccounts[abAccountIndex].Name
+		updatedMappings[sfAccounts[sfAccountIndex].Id] = filteredAccounts[abAccountIndex].Name
 	}
-	f, err := os.Create(mappingFile)
+	configDir := path.Dir(configFile)
+	f, err := os.CreateTemp(configDir, "nw-updater.yaml")
 	if err != nil {
-		return fmt.Errorf("error creating mapping file: %w", err)
+		return fmt.Errorf("error creating temp file: %w", err)
 	}
 	defer f.Close()
-	err = yaml.NewEncoder(f).Encode(accountMapping)
+	config.AccountMappings = updatedMappings
+	err = yaml.NewEncoder(f).Encode(config)
 	if err != nil {
-		return fmt.Errorf("error writing mapping file: %w", err)
+		return fmt.Errorf("error writing config file: %w", err)
 	}
-	fmt.Printf("\n\n")
-	err = yaml.NewEncoder(os.Stdout).Encode(accountMapping)
+	err = os.Rename(f.Name(), configFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("error renaming config file: %w", err)
 	}
-	fmt.Printf("\nCopy the above config, if needed, for saving mapping.yaml in ansible, etc.\n")
 	return nil
 }
 
