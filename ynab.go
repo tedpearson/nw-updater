@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	. "nw-updater/common"
 	"slices"
 	"time"
 
@@ -24,7 +25,7 @@ type YnabConfig struct {
 
 // YnabUpdateBalances takes a map of YNAB account names to balances in cents as well as a config, and creates
 // adjustment transactions in those accounts to make the account balances match.
-func YnabUpdateBalances(balances map[string]int64, config YnabConfig, decryptor crypto.OpenSslDecryptor) error {
+func YnabUpdateBalances(balances map[string]AccountBalance, config YnabConfig, decryptor crypto.OpenSslDecryptor) error {
 	c := ynab.NewClient(decryptor.Decrypt(config.EncryptedAccessToken))
 	budgets, err := c.Budget().GetBudgets()
 	if err != nil {
@@ -41,8 +42,8 @@ func YnabUpdateBalances(balances map[string]int64, config YnabConfig, decryptor 
 	if err != nil {
 		return fmt.Errorf("unable to get accounts: %w", err)
 	}
-	for accountName, balance := range balances {
-		err := updateBalance(c, bId, accountName, balance, results.Accounts)
+	for accountName, accountBalance := range balances {
+		err := updateBalance(c, bId, accountName, accountBalance.Balance, results.Accounts)
 		if err != nil {
 			fmt.Printf("Unable to update balance for '%s': %v\n", accountName, err)
 		}

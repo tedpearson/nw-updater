@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	. "nw-updater/common"
 	"nw-updater/crypto"
 	"os"
 	"path/filepath"
@@ -29,11 +30,10 @@ type SFAccountSet struct {
 
 // SFAccountJson is the JSON representation of an account in SimpleFin
 type SFAccountJson struct {
-	Name             string `json:"name"`
-	Balance          string `json:"balance"`
-	AvailableBalance string `json:"available-balance"`
-	BalanceDate      int64  `json:"balance-date"`
-	Id               string `json:"id"`
+	Name        string `json:"name"`
+	Balance     string `json:"balance"`
+	BalanceDate int64  `json:"balance-date"`
+	Id          string `json:"id"`
 }
 
 // SFAccount is a SimpleFin account with idiomatic go types
@@ -50,22 +50,22 @@ const AccountsEndpoint = "accounts"
 
 // GetBalances takes a map of SimpleFin account ids to Actual Budget account ids
 // and returns a map of Actual Budget account ids to SimpleFin accounts with balances and balance dates.
-func (sf SimpleFin) GetBalances(mappings map[string]string) (map[string]SFAccount, error) {
-	accounts, err := sf.GetAllAccounts()
+func (sf SimpleFin) GetBalances(mappings map[string]string) (map[string]AccountBalance, error) {
+	accountBalances, err := sf.GetAllAccounts()
 	if err != nil {
 		return nil, err
 	}
-	balances := make(map[string]SFAccount)
-	for _, account := range accounts {
-		if mapping, ok := mappings[account.Name]; ok {
-			balances[mapping] = account
+	balances := make(map[string]AccountBalance)
+	for _, accountBalance := range accountBalances {
+		if mapping, ok := mappings[accountBalance.Id]; ok {
+			balances[mapping] = accountBalance
 		}
 	}
 	return balances, nil
 }
 
 // GetAllAccounts returns all SimpleFin accounts and their balances.
-func (sf SimpleFin) GetAllAccounts() ([]SFAccount, error) {
+func (sf SimpleFin) GetAllAccounts() ([]AccountBalance, error) {
 	accessUrl, err := sf.GetAccessUrl()
 	if err != nil {
 		return nil, err
@@ -86,23 +86,18 @@ func (sf SimpleFin) GetAllAccounts() ([]SFAccount, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error decoding accounts: %w", err)
 	}
-	accounts := make([]SFAccount, len(accountSet.Accounts))
+	accounts := make([]AccountBalance, len(accountSet.Accounts))
 	for i, account := range accountSet.Accounts {
 		balance, err := parseCurrency(account.Balance)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing balance: %w", err)
 		}
-		availableBalance, err := parseCurrency(account.AvailableBalance)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing available balance: %w", err)
-		}
 		balanceDate := time.Unix(account.BalanceDate, 0)
-		accounts[i] = SFAccount{
-			Name:             account.Name,
-			Balance:          balance,
-			AvailableBalance: availableBalance,
-			BalanceDate:      balanceDate,
-			Id:               account.Id,
+		accounts[i] = AccountBalance{
+			Balance:     balance,
+			BalanceDate: balanceDate,
+			Id:          account.Id,
+			Name:        account.Name,
 		}
 	}
 	return accounts, nil

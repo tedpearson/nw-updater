@@ -6,6 +6,7 @@ package institution
 import (
 	"context"
 	"fmt"
+	. "nw-updater/common"
 	"regexp"
 	"runtime/debug"
 	"slices"
@@ -37,7 +38,7 @@ const (
 
 // An Institution gets the balances for the given slice of [AccountMapping].
 type Institution interface {
-	GetBalances(context.Context, Auth, crypto.OpenSslDecryptor, map[string]string) (map[string]int64, error)
+	GetBalances(context.Context, Auth, crypto.OpenSslDecryptor, map[string]string) (map[string]AccountBalance, error)
 }
 
 type SecurityCode interface {
@@ -143,12 +144,12 @@ func screenshotError(ctx context.Context, err error) error {
 // a single page. The Institution provides the nodes containing the account name and balance,
 // and selectors for the name and balance inside each node.
 func getMultipleBalances(nodes []*cdp.Node, parentCtx context.Context, mappings map[string]string, nameSelector,
-	balSelector string) (map[string]int64, error) {
+	balSelector string) (map[string]AccountBalance, error) {
 
 	ctx, cancel := context.WithTimeout(parentCtx, 1*time.Minute)
 	defer cancel()
 
-	balances := make(map[string]int64)
+	balances := make(map[string]AccountBalance)
 	errs := &MultiError{}
 	for _, node := range nodes {
 		var name, balance string
@@ -169,7 +170,12 @@ func getMultipleBalances(nodes []*cdp.Node, parentCtx context.Context, mappings 
 				errs.AddError(screenshotError(parentCtx, err))
 				continue
 			}
-			balances[mapping] = balanceNum
+			balances[mapping] = AccountBalance{
+				Balance:     balanceNum,
+				BalanceDate: time.Time{},
+				Id:          mapping,
+				Name:        mapping,
+			}
 		}
 	}
 	if errs.IsEmpty() {

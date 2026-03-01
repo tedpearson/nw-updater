@@ -3,6 +3,7 @@ package institution
 import (
 	"context"
 	"errors"
+	. "nw-updater/common"
 	"time"
 
 	"github.com/chromedp/cdproto/cdp"
@@ -60,7 +61,9 @@ func init() {
 	registerInstitution("fidelity", fidelity{})
 }
 
-func (f fidelity) GetBalances(parentCtx context.Context, auth Auth, d crypto.OpenSslDecryptor, mappings map[string]string) (map[string]int64, error) {
+func (f fidelity) GetBalances(parentCtx context.Context, auth Auth, d crypto.OpenSslDecryptor,
+	mappings map[string]string) (map[string]AccountBalance, error) {
+
 	browserCtx, cancel := newContext(parentCtx, fidelityUrlPrefix)
 	defer cancel()
 	result, screenshot := f.startAuth(browserCtx, auth.Username, d.Decrypt(auth.EncryptedPassword))

@@ -8,6 +8,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	. "nw-updater/common"
 	"nw-updater/crypto"
 	"time"
 )
@@ -70,7 +71,7 @@ func NewActualBudget(config ActualBudgetConfig, decryptor crypto.OpenSslDecrypto
 
 // UpdateBalances takes a map of Actual account ids to SimpleFin account structs and creates
 // adjustment transactions in those accounts to make the account balances match.
-func (a ActualBudget) UpdateBalances(balances map[string]SFAccount) error {
+func (a ActualBudget) UpdateBalances(balances map[string]AccountBalance) error {
 	accounts, err := a.GetAccounts()
 	if err != nil {
 		return err
@@ -89,7 +90,7 @@ func (a ActualBudget) UpdateBalances(balances map[string]SFAccount) error {
 
 // updateBalance updates the balance of an Actual account to match the provided SimpleFin account balance
 // as of the balance date.
-func (a ActualBudget) updateBalance(account ABAccount, balance SFAccount) error {
+func (a ActualBudget) updateBalance(account ABAccount, balance AccountBalance) error {
 	balanceUrl, err := url.JoinPath(a.ApiUrl, "budgets", a.SyncId, "accounts", account.Id, "balance")
 	if err != nil {
 		return err

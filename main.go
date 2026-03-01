@@ -56,6 +56,7 @@ import (
 	"flag"
 	"fmt"
 	"maps"
+	. "nw-updater/common"
 	"os"
 	"time"
 
@@ -136,32 +137,38 @@ func main() {
 // StandardMain is the main function responsible for updating balances, fetching from either YNAB or Actual Budget,
 // and updating either YNAB or Actual Budget.
 func StandardMain(config Config, ctx context.Context, decryptor crypto.OpenSslDecryptor) error {
-	if config.SimpleFin == nil {
-		balances, err := GetAllBalances(ctx, config.InstitutionConfig, decryptor)
+	balances := make(map[string]AccountBalance)
+	if len(config.InstitutionConfig) > 0 {
+		var err error
+		balances, err = GetAllBalances(ctx, config.InstitutionConfig, decryptor)
 		if err != nil {
 			err = Email(config.EmailConfig, decryptor, err)
 			if err != nil {
 				fmt.Printf("Error sending email with errors: %s", err)
 			}
 		}
+	}
+	mappings, err := ReadMappingFile(config.MappingFile)
+	if err == nil {
+		simpleFin := *config.SimpleFin
+		simpleFinBalances, err := simpleFin.GetBalances(mappings)
+		maps.Copy(balances, simpleFinBalances)
+		if err != nil {
+			return err
+		}
+	}
+	if config.ActualConfig != nil {
+		actualBudget := NewActualBudget(*config.ActualConfig, decryptor)
+		return actualBudget.UpdateBalances(balances)
+	}
+	if config.YnabConfig != nil {
 		err = YnabUpdateBalances(balances, *config.YnabConfig, decryptor)
 		if err != nil {
 			return fmt.Errorf("error updating ynab balances: %w", err)
 		}
 		return nil
-	} else {
-		simpleFin := *config.SimpleFin
-		mappings, err := ReadMappingFile(config.MappingFile)
-		if err != nil {
-			return err
-		}
-		balances, err := simpleFin.GetBalances(mappings)
-		if err != nil {
-			return err
-		}
-		actualBudget := NewActualBudget(*config.ActualConfig, decryptor)
-		return actualBudget.UpdateBalances(balances)
 	}
+	return fmt.Errorf("error, invalid config file")
 }
 
 // ReadMappingFile reads a YAML file containing SimpleFin account ids to Actual Budget id mappings
@@ -235,8 +242,8 @@ func SecurityCodeMain(args []string, ctx context.Context, configs []InstitutionC
 
 // GetAllBalances gets the balances for each InstitutionConfig from the corresponding [institution.Institution]
 // and returns all balances in a map where keys are the YNAB account name and values are in cents.
-func GetAllBalances(ctx context.Context, config []InstitutionConfig, decryptor crypto.OpenSslDecryptor) (map[string]int64, error) {
-	balances := make(map[string]int64)
+func GetAllBalances(ctx context.Context, config []InstitutionConfig, decryptor crypto.OpenSslDecryptor) (map[string]AccountBalance, error) {
+	balances := make(map[string]AccountBalance)
 	errs := &institution.MultiError{}
 	for _, ic := range config {
 		fmt.Printf("Getting balances at %s for %s\n", ic.Name, ic.Auth.Username)
