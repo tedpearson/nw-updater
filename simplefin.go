@@ -74,10 +74,12 @@ func (sf SimpleFin) GetAllAccounts() ([]AccountBalance, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("Getting accounts from SimpleFin...")
 	resp, err := http.Get(accountsUrl)
 	if err != nil {
 		return nil, fmt.Errorf("error getting accounts: %w", err)
 	}
+	fmt.Println("Got accounts from SimpleFin.")
 	defer resp.Body.Close()
 	accountSet := new(SFAccountSet)
 	reader := resp.Body.(io.Reader)

@@ -72,11 +72,13 @@ func NewActualBudget(config ActualBudgetConfig, decryptor crypto.OpenSslDecrypto
 // UpdateBalances takes a map of Actual account ids to SimpleFin account structs and creates
 // adjustment transactions in those accounts to make the account balances match.
 func (a ActualBudget) UpdateBalances(balances map[string]AccountBalance) error {
+	fmt.Println("Getting accounts from Actual Budget...")
 	accounts, err := a.GetAccounts()
 	if err != nil {
 		return err
 	}
 	// update balances
+	fmt.Println("Getting and updating balances in Actual Budget...")
 	for _, account := range accounts {
 		if balance, ok := balances[account.Id]; ok {
 			err = a.updateBalance(account, balance)
