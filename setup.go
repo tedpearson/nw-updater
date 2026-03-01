@@ -62,7 +62,7 @@ func Setup(sf SimpleFin, a ActualBudget, mappingFile string) error {
 		var selected *int
 		if mapping, ok := mappings[sfAccounts[sfAccountIndex].Id]; ok {
 			selected = new(slices.IndexFunc(filteredAccounts, func(abAccount ABAccount) bool {
-				return abAccount.Id == mapping
+				return abAccount.Name == mapping
 			}))
 			if *selected == -1 {
 				selected = nil
@@ -70,7 +70,7 @@ func Setup(sf SimpleFin, a ActualBudget, mappingFile string) error {
 		}
 		message := fmt.Sprintf("[%d/%d] Select account to sync '%s' to", i, len(sfAccountIndexes), sfNames[sfAccountIndex])
 		abAccountIndex := SingleSelect(message, abNames, selected)
-		accountMapping[sfAccounts[sfAccountIndex].Id] = filteredAccounts[abAccountIndex].Id
+		accountMapping[sfAccounts[sfAccountIndex].Id] = filteredAccounts[abAccountIndex].Name
 	}
 	f, err := os.Create(mappingFile)
 	if err != nil {

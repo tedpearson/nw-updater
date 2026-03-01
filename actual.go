@@ -80,7 +80,7 @@ func (a ActualBudget) UpdateBalances(balances map[string]AccountBalance) error {
 	// update balances
 	fmt.Println("Getting and updating balances in Actual Budget...")
 	for _, account := range accounts {
-		if balance, ok := balances[account.Id]; ok {
+		if balance, ok := balances[account.Name]; ok {
 			err = a.updateBalance(account, balance)
 			if err != nil {
 				return err
