@@ -137,10 +137,14 @@ func main() {
 // StandardMain is the main function responsible for updating balances, fetching from either YNAB or Actual Budget,
 // and updating either YNAB or Actual Budget.
 func StandardMain(config Config, ctx context.Context, decryptor crypto.OpenSslDecryptor) error {
+	mappings, err := ReadMappingFile(config.MappingFile)
+	if err != nil {
+		return err
+	}
 	balances := make(map[string]AccountBalance)
 	if len(config.InstitutionConfig) > 0 {
 		var err error
-		balances, err = GetAllBalances(ctx, config.InstitutionConfig, decryptor)
+		balances, err = GetAllBalances(ctx, config.InstitutionConfig, mappings, decryptor)
 		if err != nil {
 			err = Email(config.EmailConfig, decryptor, err)
 			if err != nil {
@@ -148,14 +152,13 @@ func StandardMain(config Config, ctx context.Context, decryptor crypto.OpenSslDe
 			}
 		}
 	}
-	mappings, err := ReadMappingFile(config.MappingFile)
-	if err == nil {
+	if config.SimpleFin != nil {
 		simpleFin := *config.SimpleFin
 		simpleFinBalances, err := simpleFin.GetBalances(mappings)
-		maps.Copy(balances, simpleFinBalances)
 		if err != nil {
 			return err
 		}
+		maps.Copy(balances, simpleFinBalances)
 	}
 	if config.ActualConfig != nil {
 		actualBudget := NewActualBudget(*config.ActualConfig, decryptor)
@@ -245,12 +248,14 @@ func SecurityCodeMain(args []string, ctx context.Context, configs []InstitutionC
 
 // GetAllBalances gets the balances for each InstitutionConfig from the corresponding [institution.Institution]
 // and returns all balances in a map where keys are the YNAB account name and values are in cents.
-func GetAllBalances(ctx context.Context, config []InstitutionConfig, decryptor crypto.OpenSslDecryptor) (map[string]AccountBalance, error) {
+func GetAllBalances(ctx context.Context, config []InstitutionConfig, mappings map[string]string,
+	decryptor crypto.OpenSslDecryptor) (map[string]AccountBalance, error) {
+
 	balances := make(map[string]AccountBalance)
 	errs := &institution.MultiError{}
 	for _, ic := range config {
 		fmt.Printf("Getting balances at %s for %s\n", ic.Name, ic.Auth.Username)
-		bs, err := institution.MustGet(ic.Name).GetBalances(ctx, ic.Auth, decryptor, ic.AccountMappings)
+		bs, err := institution.MustGet(ic.Name).GetBalances(ctx, ic.Auth, decryptor, mappings)
 		fmt.Printf("Found %d matching balances\n", len(bs))
 		if err != nil {
 			newErr := fmt.Errorf("failed to get balances from %s: %w", ic.Name, err)
