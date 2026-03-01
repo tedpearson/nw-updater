@@ -187,5 +187,5 @@ func (a ActualBudget) GetAccounts() ([]ABAccount, error) {
 	reader := resp.Body.(io.Reader)
 	decoder := json.NewDecoder(reader)
 	err = decoder.Decode(accounts)
-	return accounts.Data, fmt.Errorf("error decoding accounts: %w", err)
+	return accounts.Data, nil
 }
