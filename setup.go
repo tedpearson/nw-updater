@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/yarlson/tap"
@@ -21,12 +22,10 @@ func Setup(sf SimpleFin, a ActualBudget, mappingFile string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Getting accounts from SimpleFin...")
 	sfAccounts, err := sf.GetAllAccounts()
 	if err != nil {
 		return err
 	}
-	fmt.Println("Got SimpleFin accounts.")
 	// build items for select
 	sfNames := make([]string, len(sfAccounts))
 	for i, sfAccount := range sfAccounts {
@@ -45,24 +44,33 @@ func Setup(sf SimpleFin, a ActualBudget, mappingFile string) error {
 	if err != nil {
 		return err
 	}
-	abNames := make([]string, 0, len(abAccounts))
+	slices.SortFunc(abAccounts, func(a1, a2 ABAccount) int {
+		return strings.Compare(a1.Name, a2.Name)
+	})
+	filteredAccounts := make([]ABAccount, 0)
 	for _, account := range abAccounts {
 		if account.OffBudget && !account.Closed {
-			abNames = append(abNames, account.Name)
+			filteredAccounts = append(filteredAccounts, account)
 		}
 	}
-	slices.Sort(abNames)
+	abNames := make([]string, 0, len(abAccounts))
+	for _, account := range filteredAccounts {
+		abNames = append(abNames, account.Name)
+	}
 	accountMapping := make(map[string]string)
 	for i, sfAccountIndex := range sfAccountIndexes {
 		var selected *int
 		if mapping, ok := mappings[sfAccounts[sfAccountIndex].Id]; ok {
-			selected = new(slices.IndexFunc(abAccounts, func(abAccount ABAccount) bool {
+			selected = new(slices.IndexFunc(filteredAccounts, func(abAccount ABAccount) bool {
 				return abAccount.Id == mapping
 			}))
+			if *selected == -1 {
+				selected = nil
+			}
 		}
 		message := fmt.Sprintf("[%d/%d] Select account to sync '%s' to", i, len(sfAccountIndexes), sfNames[sfAccountIndex])
 		abAccountIndex := SingleSelect(message, abNames, selected)
-		accountMapping[sfAccounts[sfAccountIndex].Id] = abAccounts[abAccountIndex].Id
+		accountMapping[sfAccounts[sfAccountIndex].Id] = filteredAccounts[abAccountIndex].Id
 	}
 	f, err := os.Create(mappingFile)
 	if err != nil {
