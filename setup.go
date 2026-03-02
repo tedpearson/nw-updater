@@ -78,19 +78,15 @@ func Setup(sf SimpleFin, a ActualBudget, config Config, configFile string) error
 		abAccountIndex := SingleSelect(message, abNames, selected)
 		updatedMappings[sfAccounts[sfAccountIndex].Id] = filteredAccounts[abAccountIndex].Name
 	}
-	f, err := os.CreateTemp("", "nw-updater.yaml")
+	f, err := os.OpenFile("nw-updater.yaml", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return fmt.Errorf("error creating temp file: %w", err)
+		return fmt.Errorf("error opening config file: %w", err)
 	}
 	defer f.Close()
 	config.AccountMappings = updatedMappings
 	err = yaml.NewEncoder(f).Encode(config)
 	if err != nil {
 		return fmt.Errorf("error writing config file: %w", err)
-	}
-	err = os.Rename(f.Name(), configFile)
-	if err != nil {
-		return fmt.Errorf("error renaming config file: %w", err)
 	}
 	return nil
 }
