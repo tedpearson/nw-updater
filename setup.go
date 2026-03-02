@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"regexp"
 	"slices"
 	"strings"
@@ -79,8 +78,7 @@ func Setup(sf SimpleFin, a ActualBudget, config Config, configFile string) error
 		abAccountIndex := SingleSelect(message, abNames, selected)
 		updatedMappings[sfAccounts[sfAccountIndex].Id] = filteredAccounts[abAccountIndex].Name
 	}
-	configDir := path.Dir(configFile)
-	f, err := os.CreateTemp(configDir, "nw-updater.yaml")
+	f, err := os.CreateTemp("", "nw-updater.yaml")
 	if err != nil {
 		return fmt.Errorf("error creating temp file: %w", err)
 	}
