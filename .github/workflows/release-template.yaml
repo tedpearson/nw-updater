@@ -72,4 +72,4 @@ jobs:
           commit: ${{inputs.ref}}
           token: ${{ secrets.GITHUB_TOKEN }}
           omitBodyDuringUpdate: true
-          makeLatest: ${{ (GITHUB_REF_NAME == 'main') && 'legacy' || 'false' }}
+          makeLatest: ${{ (github.ref_name == 'main') && 'legacy' || 'false' }}
