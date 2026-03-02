@@ -78,7 +78,7 @@ func Setup(sf SimpleFin, a ActualBudget, config Config, configFile string) error
 		abAccountIndex := SingleSelect(message, abNames, selected)
 		updatedMappings[sfAccounts[sfAccountIndex].Id] = filteredAccounts[abAccountIndex].Name
 	}
-	f, err := os.OpenFile("nw-updater.yaml", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	f, err := os.OpenFile(configFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return fmt.Errorf("error opening config file: %w", err)
 	}
