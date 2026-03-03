@@ -172,7 +172,7 @@ func getMultipleBalances(nodes []*cdp.Node, parentCtx context.Context, mappings 
 			}
 			balances[mapping] = AccountBalance{
 				Balance:     balanceNum,
-				BalanceDate: time.Time{},
+				BalanceDate: time.Now(),
 				Id:          mapping,
 				Name:        mapping,
 			}
