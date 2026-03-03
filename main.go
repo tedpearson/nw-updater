@@ -156,18 +156,23 @@ func StandardMain(config Config, ctx context.Context, decryptor crypto.OpenSslDe
 		}
 		maps.Copy(balances, simpleFinBalances)
 	}
+	if config.ActualConfig == nil && config.YnabConfig == nil {
+		return fmt.Errorf("error, invalid config file")
+	}
 	if config.ActualConfig != nil {
 		actualBudget := NewActualBudget(*config.ActualConfig, decryptor)
-		return actualBudget.UpdateBalances(balances)
+		err := actualBudget.UpdateBalances(balances)
+		if err != nil {
+			return err
+		}
 	}
 	if config.YnabConfig != nil {
 		err := YnabUpdateBalances(balances, *config.YnabConfig, decryptor)
 		if err != nil {
 			return fmt.Errorf("error updating ynab balances: %w", err)
 		}
-		return nil
 	}
-	return fmt.Errorf("error, invalid config file")
+	return nil
 }
 
 // SimpleFinAuthMain authenticates with SimpleFin and saves the access URL to a file.
