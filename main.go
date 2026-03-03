@@ -279,7 +279,7 @@ func GetContext(headless bool, websocket string) (context.Context, context.Cance
 }
 
 func FilterMappings(mappings map[string]string, institution, username string) map[string]string {
-	prefix := institution + ":" + username + ":"
+	prefix := ":" + institution + ":" + username + ":"
 	for k, v := range mappings {
 		if strings.Index(k, prefix) == 0 {
 			mappings[k[len(prefix):]] = v
