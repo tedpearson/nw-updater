@@ -130,6 +130,7 @@ func main() {
 		if err != nil {
 			fmt.Printf("Error sending email with error: %s", err)
 		}
+		os.Exit(1)
 	}
 
 }
