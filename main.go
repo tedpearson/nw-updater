@@ -139,10 +139,12 @@ func main() {
 // and updating either YNAB or Actual Budget.
 func StandardMain(config Config, ctx context.Context, decryptor crypto.OpenSslDecryptor) error {
 	balances := make(map[string]AccountBalance)
+	var balanceErr error
 	if len(config.InstitutionConfig) > 0 {
 		var err error
 		balances, err = GetAllBalances(ctx, config.InstitutionConfig, config.AccountMappings, decryptor)
 		if err != nil {
+			balanceErr = err
 			err = Email(config.EmailConfig, decryptor, err)
 			if err != nil {
 				fmt.Printf("Error sending email with errors: %s", err)
@@ -173,7 +175,7 @@ func StandardMain(config Config, ctx context.Context, decryptor crypto.OpenSslDe
 			return fmt.Errorf("error updating ynab balances: %w", err)
 		}
 	}
-	return nil
+	return balanceErr
 }
 
 // SimpleFinAuthMain authenticates with SimpleFin and saves the access URL to a file.
