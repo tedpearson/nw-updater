@@ -53,6 +53,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"maps"
@@ -126,10 +127,13 @@ func main() {
 		err = StandardMain(config, ctx, decryptor)
 	}
 	if err != nil {
-		err = Email(config.EmailConfig, decryptor, err)
-		if err != nil {
-			fmt.Printf("Error sending email with error: %s", err)
+		if _, ok := errors.AsType[*institution.MultiError](err); !ok {
+			err = Email(config.EmailConfig, decryptor, err)
+			if err != nil {
+				fmt.Printf("Error sending email with error: %s", err)
+			}
 		}
+		cancel()
 		os.Exit(1)
 	}
 
