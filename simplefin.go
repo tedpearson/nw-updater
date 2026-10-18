@@ -120,6 +120,9 @@ func (sf SimpleFin) Authenticate(token string) error {
 	if err != nil {
 		return fmt.Errorf("error reading access url: %w", err)
 	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("error claiming access url: %s: %s", resp.Status, strings.TrimSpace(string(accessUrl)))
+	}
 	return sf.storeAccessUrl(accessUrl, sf.Passphrase)
 }
 
@@ -153,11 +156,12 @@ func (sf SimpleFin) GetAccessUrl() (string, error) {
 	}
 	decodedLen := base64.StdEncoding.DecodedLen(len(encoded))
 	encrypted := make([]byte, decodedLen)
-	_, err = base64.StdEncoding.Decode(encrypted, encoded)
+	n, err := base64.StdEncoding.Decode(encrypted, encoded)
 	if err != nil {
 		return "", fmt.Errorf("error decoding access url: %w", err)
 	}
-	return crypto.DecryptAES256GCM(encrypted, sf.Passphrase)
+	// DecodedLen is an upper bound, so trim to the bytes actually decoded
+	return crypto.DecryptAES256GCM(encrypted[:n], sf.Passphrase)
 }
 
 // parseCurrency removes the decimal point from a string representing a currency amount
